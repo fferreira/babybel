@@ -23,6 +23,21 @@ type sign = (const * tp) list (* signature for constructos *)
 type t_sign = const list (* signature for types (i.e: list of types) *)
 type ctx = (var * tp) list (* contexts *)
 
+let gen_sym =
+  let x = ref 0 in
+  fun () -> x := !x +1 ; "$" ^ string_of_int !x
+
+let rec fv (m : nor) : var list =
+  match m with
+  | Lam (y, m) -> List.filter (fun x -> x <> y) (fv m)
+  | App (Var x, sp) -> "x" :: fv_sp sp
+  | App (_, sp) -> fv_sp sp
+
+and fv_sp (sp : sp) : var list =
+  match sp with
+  | Empty -> []
+  | Cons (m, sp) -> fv m @ fv_sp sp
+
 (* Type checking *)
 
 exception TypeCheckingFailure
@@ -53,12 +68,30 @@ and infer_head st si c h =
 
 (* Hereditary substitution *)
 
-exception Violation (* this cannot happen *)
+exception Violation (* this is an impossible case *)
+
+(* rename free variable x to y in m *)
+let rec ren (x, y : var * var) (m : nor) : nor =
+  match m with
+  | Lam (z, m) when z = x -> Lam (z, m)
+  | Lam (z, m) -> Lam (z, ren (x, y) m)
+  | App (Var z, sp) when z = x -> App(Var y, ren_sp (x, y) sp)
+  | App (h, sp) -> App(h, ren_sp (x, y) sp)
+
+and ren_sp (s : var * var) (sp : sp) : sp =
+  match sp with
+  | Empty -> Empty
+  | Cons (m, sp) -> Cons (ren s m, ren_sp s sp)
 
 (* substitute m for x in n *)
 let rec hsub_nor (x , m : var * nor) (n : nor) : nor =
   match n with
-  | Lam (y, n') -> if (x = y) then Lam (y, n') else Lam (y, hsub_nor (x, m) n') (* MMM avoid capture here! *)
+  | Lam (y, n) ->
+     if List.mem y (fv m)
+     then let z = gen_sym() in hsub_nor (x, m) (Lam (z, ren (y, z) n))
+     else if (x = y)
+     then Lam (y, n)
+     else Lam (y, hsub_nor (x, m) n)
   | App (Const a, sp) -> App (Const a, hsub_sp (x, m) sp)
   | App (Var y, sp) when x = y -> app_spine m (hsub_sp (x, m) sp)
   | App (Var y, sp) ->  App (Var y, hsub_sp (x, m) sp)
@@ -71,15 +104,14 @@ and hsub_sp (x, m  : var * nor) (sp : sp) : sp =
 and app_spine (m : nor) (sp : sp) : nor =
   match sp with
   | Empty -> m
-  | Cons (n, sp) -> app_spine (nor_to_nor m n) sp
+  | Cons (n, sp) -> app_spine (app_nor_to_nor m n) sp
 
-and nor_to_nor (m : nor)(n : nor) : nor =
+and app_nor_to_nor (m : nor)(n : nor) : nor =
   match m with
   | Lam (z, m) -> hsub_nor (z, n) m
   (* MMM still thinking whether this is a violation (aka impossible)
      what about non eta long constructors *)
   | _ -> raise Violation
-
 
 (* Some simple examples *)
 
