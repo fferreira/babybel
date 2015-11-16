@@ -6,10 +6,13 @@ type tp =
   TConst of const
   | Arr of tp * tp
 
-type var = string
+type name = string
+
+type var = Top
+	 | Pop of var
 
 type nor =
-  | Lam of var * nor
+  | Lam of name * nor
   | App of hd * sp  (* if we get more neutral terms, perhaps we should add a type for neutrals *)
 and hd =
    | Const of const
@@ -18,88 +21,83 @@ and sp =
   | Cons of nor * sp
   | Empty
 
+type sub =
+  | Id
+  | Shift
+  | Dot of sub * nor
+  | Comp of sub * sub
+
 type sign = (const * tp) list (* signature for constructos *)
-(* MMM t_sign is not really needed... *)
-type t_sign = const list (* signature for types (i.e: list of types) *)
-type ctx = (var * tp) list (* contexts *)
+type ctx = (name * tp) list (* contexts *)
 
-let gen_sym =
-  let x = ref 0 in
-  fun () -> x := !x +1 ; "$" ^ string_of_int !x
+exception Lookup_failure
 
-let rec fv (m : nor) : var list =
-  match m with
-  | Lam (y, m) -> List.filter (fun x -> x <> y) (fv m)
-  | App (Var x, sp) -> "x" :: fv_sp sp
-  | App (_, sp) -> fv_sp sp
+let rec lookup x c =
+  match x, c with
+  | Top, c :: _ -> c
+  | Pop x, _ :: cs -> lookup x cs
+  | _ -> raise Lookup_failure
 
-and fv_sp (sp : sp) : var list =
+let nor_of_var x = App (Var x, Empty)
+let top : nor = nor_of_var Top (* The top variable in the context *)
+
+let lookup_ctx x c = snd (lookup x c)
+
+let rec append_sp (sp : sp) (m : nor) =
   match sp with
-  | Empty -> []
-  | Cons (m, sp) -> fv m @ fv_sp sp
+  | Empty -> Cons (m, Empty)
+  | Cons (n, sp) -> Cons (n, append_sp sp m)
 
 (* Type checking *)
 
-exception TypeCheckingFailure
+exception Type_checking_failure
 
-let rec check (st : t_sign) (si : sign) (c : ctx) (m : nor) (t: tp) : tp =
+let rec check (si : sign) (c : ctx) (m : nor) (t: tp) : tp =
   match m, t with
-  | Lam (x, m), Arr (s, t) -> check st si ((x, s)::c) m t
-  | _ , _ -> if t = infer st si c m then t else raise TypeCheckingFailure
+  | Lam (x, m), Arr (s, t) ->
+     let _ = check si ((x, s)::c) m t in
+     Arr (s, t)
+  | _ , _ -> if t = infer si c m then t else raise Type_checking_failure
 
-and check_spine st si c sp t =
+and check_spine (si : sign) (c : ctx) (sp : sp) (t: tp) : tp =
   match sp, t with
   | Empty, _ -> t
   | Cons (m, sp'), Arr(s, t) ->
-     let _ = check st si c m s in
-     check_spine st si c sp' t
+     let _ = check si c m s in
+     check_spine si c sp' t
+  | Cons _, _ -> raise Type_checking_failure
 
-and infer st si c m =
+and infer si c m =
   match m with
   | App (h, sp) ->
-     let t = infer_head st si c h in
-     check_spine st si c sp t
+     let t = infer_head si c h in
+     check_spine si c sp t
+  (* if we get more neutral terms and a neutral type this case would disappear *)
+  | Lam _ -> raise Type_checking_failure
 
-and infer_head st si c h =
+and infer_head si c h =
   try match h with
   | Const a -> List.assoc a si
-  | Var x -> List.assoc x c
-  with Not_found -> raise TypeCheckingFailure
+  | Var x -> lookup_ctx x c
+  with Not_found -> raise Type_checking_failure
 
-(* Hereditary substitution *)
+let rec above (x : var) (y : var) : bool = x >= y
+
+(* Simultaneous hereditary substitution *)
 
 exception Violation (* this is an impossible case *)
 
-(* rename free variable x to y in m *)
-let rec ren (x, y : var * var) (m : nor) : nor =
-  match m with
-  | Lam (z, m) when z = x -> Lam (z, m)
-  | Lam (z, m) -> Lam (z, ren (x, y) m)
-  | App (Var z, sp) when z = x -> App(Var y, ren_sp (x, y) sp)
-  | App (h, sp) -> App(h, ren_sp (x, y) sp)
-
-and ren_sp (s : var * var) (sp : sp) : sp =
-  match sp with
-  | Empty -> Empty
-  | Cons (m, sp) -> Cons (ren s m, ren_sp s sp)
-
-(* substitute m for x in n *)
-let rec hsub_nor (x , m : var * nor) (n : nor) : nor =
+let rec hsub_nor (s : sub) (n : nor) : nor =
   match n with
   | Lam (y, n) ->
-     if List.mem y (fv m)
-     then let z = gen_sym() in hsub_nor (x, m) (Lam (z, ren (y, z) n))
-     else if (x = y)
-     then Lam (y, n)
-     else Lam (y, hsub_nor (x, m) n)
-  | App (Const a, sp) -> App (Const a, hsub_sp (x, m) sp)
-  | App (Var y, sp) when x = y -> app_spine m (hsub_sp (x, m) sp)
-  | App (Var y, sp) ->  App (Var y, hsub_sp (x, m) sp)
+     Lam (y, hsub_nor (Dot (Comp(Shift, s), top)) n)
+  | App (Const a, sp) -> App (Const a, hsub_sp s sp)
+  | App (Var y, sp) -> app_spine (lookup_sub y s) (hsub_sp s sp)
 
-and hsub_sp (x, m  : var * nor) (sp : sp) : sp =
+and hsub_sp (s : sub) (sp : sp) : sp =
   match sp with
   | Empty -> Empty
-  | Cons (n, sp) -> Cons(hsub_nor (x, m) n, hsub_sp (x, m) sp)
+  | Cons (n, sp) -> Cons(hsub_nor s n, hsub_sp s sp)
 
 and app_spine (m : nor) (sp : sp) : nor =
   match sp with
@@ -108,16 +106,27 @@ and app_spine (m : nor) (sp : sp) : nor =
 
 and app_nor_to_nor (m : nor)(n : nor) : nor =
   match m with
-  | Lam (z, m) -> hsub_nor (z, n) m
-  (* MMM still thinking whether this is a violation (aka impossible)
-     what about non eta long constructors *)
-  | _ -> raise Violation
+  | Lam (z, m) -> hsub_nor (Dot (Id, n)) m
+  | App (m, sp) -> App(m, append_sp sp n)
+
+and lookup_sub x s =
+  match x, s with
+  | _ , Id -> nor_of_var x
+  | _ , Shift -> nor_of_var (Pop x)
+  | Top , Dot (_, m) -> m
+  | Pop x , Dot(s, _) -> lookup_sub x s
+  | _ , Comp(s, s') -> hsub_nor s (lookup_sub x s')
 
 (* Some simple examples *)
 
-let id = Lam ("x", App (Var "x", Empty)) ;;
+let id = Lam ("x", App (Var Top, Empty)) ;;
 let id_tp = Arr (TConst "T", TConst "T");;
-let id_tc = check ["T"] [] [] id id_tp
+let id_tc = check [] [] id id_tp
 
-let f =  Lam ("x", App (Var "f", Cons (App (Var "x", Empty), Empty))) ;;
-let f' = hsub_nor ("f", id) f
+let f =  Lam ("x", App (Var (Pop Top), Cons (App (Var Top, Empty), Empty))) ;;
+let f_tp = id_tp
+let t_tc = check [] ["_", id_tp] f f_tp
+let f' = hsub_nor Id f
+let res = f = f'
+let f'' = hsub_nor (Dot (Id, id)) f
+let f''_tc = check [] [] f'' f_tp
