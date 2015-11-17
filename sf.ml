@@ -184,6 +184,12 @@ let rec decomp (si : sign) (cD : mctx) (cs : constr) : constr list =
   | UN (cPsi, Neu(App (h, sp)), Lam(x, m), Arr (s, t)) ->
      [UN ((x, s)::cPsi, Neu(App(h, append_sp sp top)), m, t)]
 
+  (* orientation *)
+  | UN (cPsi, Neu(App(Meta (u, s), Empty)), Neu(App(Meta (v, s'), Empty)), _) ->
+     [cs]
+  | UN (cPsi, m, Neu(App(Meta (v, s'), Empty)), t) ->
+     [UN (cPsi, Neu(App(Meta (v, s'), Empty)), m, t)]
+
   (* decomposition of neutrals *)
   | UN (cPsi, Neu(App(h, sp)), Neu(App(h', sp')), _) when h <> h' ->
      (* We may stop now, the thing is not unifiable *)
