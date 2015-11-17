@@ -12,11 +12,13 @@ type var = int
 
 type nor
   = Lam of name * nor
-  | App of hd * sp  (* if we get more neutral terms, perhaps we should add a type for neutrals *)
+  | Neu of neu
+and neu
+  = App of hd * sp
 and hd
-   = Const of constant
-   | Var of var
-   | Meta of var * sub
+  = Const of constant
+  | Var of var
+  | Meta of var * sub
 and sp
   = Cons of nor * sp
   | Empty
@@ -36,7 +38,7 @@ let rec lookup x c =
   try List.nth c x
   with Invalid_argument _ -> raise Lookup_failure
 
-let nor_of_var x = App (Var x, Empty)
+let nor_of_var x = Neu (App (Var x, Empty))
 let top : nor = nor_of_var 0 (* The top variable in the context *)
 
 let lookup_ctx x c = snd (lookup x c)
@@ -45,6 +47,9 @@ let rec append_sp (sp : sp) (m : nor) =
   match sp with
   | Empty -> Cons (m, Empty)
   | Cons (n, sp) -> Cons (n, append_sp sp m)
+
+let append_neu (App (h, sp) : neu) (m : nor) =
+  App (h, append_sp sp m)
 
 (* Type checking *)
 
@@ -55,7 +60,7 @@ let rec check (si : sign) (cD : mctx) (c : ctx) (m : nor) (t: tp) : tp =
   | Lam (x, m), Arr (s, t) ->
      let _ = check si cD ((x, s)::c) m t in
      Arr (s, t)
-  | _ , _ -> if t = infer si cD c m then t else raise Type_checking_failure
+  | Neu r, _ -> if t = infer si cD c r then t else raise Type_checking_failure
 
 and check_spine (si : sign) (cD : mctx) (c : ctx) (sp : sp) (t: tp) : tp =
   match sp, t with
@@ -72,13 +77,11 @@ and check_sub  (si : sign) (cD : mctx) (c : ctx) (s : sub) (c' : ctx) : unit =
   | Dot (s, m), (_, t)::c' ->
      check si cD c m t ; check_sub si cD c s c'
 
-and infer si cD c m =
-  match m with
+and infer si cD c (r : neu) =
+  match r with
   | App (h, sp) ->
      let t = infer_head si cD c h in
      check_spine si cD c sp t
-  (* if we get more neutral terms and a neutral type this case would disappear *)
-  | Lam _ -> raise Type_checking_failure
 
 and infer_head si cD c h =
   try match h with
@@ -99,9 +102,9 @@ let rec hsub_nor (s : sub) (n : nor) : nor =
   match n with
   | Lam (y, n) ->
      Lam (y, hsub_nor (Dot (shift_sub s, top)) n)
-  | App (Var y, sp) -> app_spine (lookup_sub y s) (hsub_sp s sp)
-  | App (Const a, sp) -> App (Const a, hsub_sp s sp)
-  | App (Meta (u, s'), sp) -> App (Meta (u, comp_sub s s'), hsub_sp s sp)
+  | Neu(App (Var y, sp)) -> app_spine (lookup_sub y s) (hsub_sp s sp)
+  | Neu(App (Const a, sp)) -> Neu(App (Const a, hsub_sp s sp))
+  | Neu(App (Meta (u, s'), sp)) -> Neu(App (Meta (u, comp_sub s s'), hsub_sp s sp))
 
 and hsub_sp (s : sub) (sp : sp) : sp =
   match sp with
@@ -116,7 +119,7 @@ and app_spine (m : nor) (sp : sp) : nor =
 and app_nor_to_nor (m : nor)(n : nor) : nor =
   match m with
   | Lam (z, m) -> hsub_nor (Dot (Shift 0, n)) m
-  | App (m, sp) -> App(m, append_sp sp n)
+  | Neu(App (m, sp)) -> Neu(App(m, append_sp sp n))
 
 and shift_nor (m : nor) = hsub_nor (Shift 1) m
 
@@ -143,11 +146,11 @@ and lookup_sub x s =
 
 (* Some simple examples *)
 
-let id = Lam ("x", App (Var 0, Empty)) ;;
+let id = Lam ("x", Neu(App (Var 0, Empty))) ;;
 let id_tp = Arr (TConst "T", TConst "T");;
 let id_tc = check [] [] [] id id_tp
 
-let f =  Lam ("x", App (Var 1, Cons (App (Var 0, Empty), Empty))) ;;
+let f =  Lam ("x", Neu(App (Var 1, Cons (Neu(App (Var 0, Empty)), Empty)))) ;;
 let f_tp = id_tp
 let t_tc = check [] [] ["_", id_tp] f f_tp
 let f' = hsub_nor (Shift 0) f
@@ -162,6 +165,41 @@ let f''_tc = check [] [] [] f'' f_tp
 type constr
   = Top
   | Bottom
-  | UNor of ctx * nor * nor * tp
-  | USp of unit
+  | UN of ctx * nor * nor * tp 	(* Unify normal *)
+  | USp of ctx * neu * tp * sp * sp
   | Sol of ctx * unit * nor * tp
+
+(* Local simplification rules *)
+
+(* decomposition *)
+
+let rec decomp (si : sign) (cD : mctx) (cs : constr) : constr list =
+  match cs with
+  (* decomposition of functions *)
+  | UN (cPsi, Lam(x, m), Lam(y, n), Arr (s, t)) ->
+     [UN ((x, s)::cPsi, m, n, t)] (* x is just the name of the variable, could be y *)
+
+  | UN (cPsi, Lam(x, m), Neu(App (h, sp)), Arr (s, t)) ->
+     [UN ((x, s)::cPsi, m, Neu(App(h, append_sp sp top)), t)]
+  | UN (cPsi, Neu(App (h, sp)), Lam(x, m), Arr (s, t)) ->
+     [UN ((x, s)::cPsi, Neu(App(h, append_sp sp top)), m, t)]
+
+  (* decomposition of neutrals *)
+  | UN (cPsi, Neu(App(h, sp)), Neu(App(h', sp')), _) when h <> h' ->
+     (* We may stop now, the thing is not unifiable *)
+     [Bottom]
+  | UN (cPsi, Neu(App(h, sp)), Neu(App(h', sp')), _) ->
+     let t = infer_head si cD cPsi h in
+     [USp (cPsi, App (h, Empty), t, sp, sp')]
+
+  (* decomposition of spines *)
+  | USp (cPsi, h, t, Empty, Empty) ->
+     (* Technically it is [Top] but... *)
+     []
+  | USp (cPsi, r, Arr (s, t), Cons (m, sp), Cons (m', sp')) ->
+     UN (cPsi, m, m', s) :: (decomp si cD (USp (cPsi, append_neu r m, t, sp, sp')))
+
+  | _ -> [cs]
+
+(* Unification problem *)
+let rec unify (cD : mctx) (cs : constr list) : constr list = [Bottom]
