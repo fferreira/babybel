@@ -61,6 +61,7 @@ let rec check (si : sign) (cD : mctx) (c : ctx) (m : nor) (t: tp) : tp =
      let _ = check si cD ((x, s)::c) m t in
      Arr (s, t)
   | Neu r, _ -> if t = infer si cD c r then t else raise Type_checking_failure
+  | _ -> raise Type_checking_failure
 
 and check_spine (si : sign) (cD : mctx) (c : ctx) (sp : sp) (t: tp) : tp =
   match sp, t with
