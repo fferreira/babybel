@@ -1,6 +1,4 @@
-(* Initial idea for the syntax of megapteraML *)
-
-let _ = {def|
+let sigma = {def|
 
 tp: type.
 nat : tp.
@@ -18,27 +16,12 @@ fix : (tm -> tm) -> tm.
 
 |def}
 
-(* some options for the pattern matching syntax *)
 
-(* (\* equational style *\) *)
-(* let eval = {fun| *)
-(* eval : [g |- tp] -> [h |- tp] *)
-(* eval [g |- z] = [g |- z] *)
-(* eval [g|- app (lam (\x. 'm)) 'n] = eval [g |- m' 'n] *)
-(* |fun} *)
+(* a function on these *)
 
-(* (\* explicit pattern matching *\) *)
 (* let rec eval e = *)
-(*   {match| e with *)
-(*    | [g |- z] -> [g |- z] *)
-(*    | [g|- app (lam (\x. 'm)) 'n] -> eval [g |- m' 'n] *)
-(*    |match} *)
+(*   match e with *)
+(*   | {| g |- z |} -> {| g |- z |} *)
+(*   | {| g|- app (lam (\x. 'm)) 'n |} -> eval {|g |- m' 'n|} *)
 
-(* minimal embedding *)
-
-let rec eval e =
-  match e with
-  | {| g |- z |} -> {| g |- z |}
-  | {| g|- app (lam (\x. 'm)) 'n |} -> eval {|g |- m' 'n|}
-
-let res = eval {| app (lam (\x. x)) z |}
+(* let res = eval {| app (lam (\x. x)) z |} *)

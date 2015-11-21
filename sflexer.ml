@@ -27,6 +27,7 @@ let add_word pos length = { pos with Lexing.pos_cnum = pos.Lexing.pos_cnum + len
 let rec main_scanner pos = lexer
 | wsp | tab -> main_scanner (add_word pos 1) lexbuf (* ignore whitespace *)
 | nl -> main_scanner (add_line pos) lexbuf   (* ignores new lines *)
+| "(*" -> comment pos 0 lexbuf
 | eof -> add_word pos (Ulexing.lexeme_length lexbuf), EOF
 
 | ':' -> add_word pos (Ulexing.lexeme_length lexbuf), COLON
