@@ -14,25 +14,25 @@ app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 fix : (tm -> tm) -> tm.
 
-schema ctx = tm;
+(* schema ctx = tm; *)
 
 |def}
 
 (* some options for the pattern matching syntax *)
 
-(* equational style *)
-let eval = {fun|
-eval : [g |- tp] -> [h |- tp]
-eval [g |- z] = [g |- z]
-eval [g|- app (lam (\x. 'm)) 'n] = eval [g |- m' 'n]
-|fun}
+(* (\* equational style *\) *)
+(* let eval = {fun| *)
+(* eval : [g |- tp] -> [h |- tp] *)
+(* eval [g |- z] = [g |- z] *)
+(* eval [g|- app (lam (\x. 'm)) 'n] = eval [g |- m' 'n] *)
+(* |fun} *)
 
-(* explicit pattern matching *)
-let rec eval e =
-  {match| e with
-   | [g |- z] -> [g |- z]
-   | [g|- app (lam (\x. 'm)) 'n] -> eval [g |- m' 'n]
-   |match}
+(* (\* explicit pattern matching *\) *)
+(* let rec eval e = *)
+(*   {match| e with *)
+(*    | [g |- z] -> [g |- z] *)
+(*    | [g|- app (lam (\x. 'm)) 'n] -> eval [g |- m' 'n] *)
+(*    |match} *)
 
 (* minimal embedding *)
 
