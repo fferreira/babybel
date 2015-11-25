@@ -21,16 +21,18 @@ let parser menhir_parser lexbuf =
       | Sflexer.Error x -> raise (Scanning_error (!position, x))
       | Sfparser.Error  -> raise (Syntax_error !position)
 
-let parse s =
+let parse p s =
   let lexbuf = Ulexing.from_utf8_string s in
-  parser (Sfparser.decls) lexbuf
+  parser p lexbuf
 
 let id_mapper (argv : string list) : Ast_mapper.mapper =
   { default_mapper with
     expr = fun mapper expr ->
   	   match expr with
   	   | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } ->
-	      Astgen.decls_to_ast (parse s)
+	      Astgen.decls_to_ast (parse Sfparser.decls s)
+  	   | { pexp_desc = Pexp_constant (Const_string (s, Some "term")) } ->
+	      Astgen.term_to_ast (parse Sfparser.term_expr s)
   	   | other -> default_mapper.expr mapper other ;}
 
 let () = register "identity_mapper" id_mapper

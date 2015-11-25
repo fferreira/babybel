@@ -34,11 +34,12 @@ let rec main_scanner pos = lexer
 | '(' -> add_word pos (Ulexing.lexeme_length lexbuf), LPAREN
 | ')' -> add_word pos (Ulexing.lexeme_length lexbuf), RPAREN
 | '.' -> add_word pos (Ulexing.lexeme_length lexbuf), DOT
+| '\\' -> add_word pos (Ulexing.lexeme_length lexbuf), FN
 | "->" -> add_word pos (Ulexing.lexeme_length lexbuf), ARR
 | "type" -> add_word pos (Ulexing.lexeme_length lexbuf), TYPE
 | "|-" -> add_word pos (Ulexing.lexeme_length lexbuf), VDASH
-| identifier -> add_word pos (Ulexing.lexeme_length lexbuf), CON (Ulexing.utf8_lexeme lexbuf)
-| '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), VAR (Ulexing.utf8_lexeme lexbuf)
+| identifier -> add_word pos (Ulexing.lexeme_length lexbuf), ID (Ulexing.utf8_lexeme lexbuf)
+| '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), MVAR (Ulexing.utf8_lexeme lexbuf)
 
 and comment pos level = lexer
 		      | "*)" -> if level = 0 then main_scanner (add_word pos 2) lexbuf else comment (add_word pos 2) (level-1) lexbuf
