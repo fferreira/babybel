@@ -25,7 +25,7 @@ let parse p s =
   let lexbuf = Ulexing.from_utf8_string s in
   parser p lexbuf
 
-let id_mapper (argv : string list) : Ast_mapper.mapper =
+let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   { default_mapper with
     expr = fun mapper expr ->
   	   match expr with
@@ -35,4 +35,4 @@ let id_mapper (argv : string list) : Ast_mapper.mapper =
 	      Astgen.term_to_ast (parse Sfparser.term_expr s)
   	   | other -> default_mapper.expr mapper other ;}
 
-let () = register "identity_mapper" id_mapper
+let () = register "babybel_mapper" babybel_mapper

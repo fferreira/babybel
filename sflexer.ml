@@ -24,6 +24,12 @@ let add_line pos = { pos with
 		     Lexing.pos_cnum = 0}
 let add_word pos length = { pos with Lexing.pos_cnum = pos.Lexing.pos_cnum + length }
 
+let remove_first (s : string) : string =
+  if String.length s = 0 then raise (Error "String to short")
+  else let acc = ref "" in
+       String.iteri (fun n c -> if n <> 0 then acc := !acc ^ String.make 1 c) s ;
+       !acc
+
 let rec main_scanner pos = lexer
 | wsp | tab -> main_scanner (add_word pos 1) lexbuf (* ignore whitespace *)
 | nl -> main_scanner (add_line pos) lexbuf   (* ignores new lines *)
@@ -39,7 +45,7 @@ let rec main_scanner pos = lexer
 | "type" -> add_word pos (Ulexing.lexeme_length lexbuf), TYPE
 | "|-" -> add_word pos (Ulexing.lexeme_length lexbuf), VDASH
 | identifier -> add_word pos (Ulexing.lexeme_length lexbuf), ID (Ulexing.utf8_lexeme lexbuf)
-| '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), MVAR (Ulexing.utf8_lexeme lexbuf)
+| '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), MVAR (remove_first (Ulexing.utf8_lexeme lexbuf))
 
 and comment pos level = lexer
 		      | "*)" -> if level = 0 then main_scanner (add_word pos 2) lexbuf else comment (add_word pos 2) (level-1) lexbuf
