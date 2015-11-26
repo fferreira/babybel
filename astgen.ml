@@ -1,4 +1,5 @@
-open Syntax
+open Sf
+open Parsetree
 open Ast_convenience
 
 let rec tp_to_ast = function
@@ -11,14 +12,45 @@ let decl_to_ast = function
 
 let decls_to_ast ds = list (List.map decl_to_ast ds)
 
-let rec term_to_ast = function
-  | Lam (x, m) -> [%expr Lam ([%e str x], [%e term_to_ast m])]
-  | App (h, sp) -> [%expr App ([%e term_to_ast h], [%e list (List.map term_to_ast sp)])]
-  | Var x -> [%expr Var [%e str x]]
-  | MVar x -> [%expr MVar [%e str x]]
+let rec nor_to_ast = function
+  | Lam (x, m) ->  [%expr Lam ([%e str x], [%e nor_to_ast m])]
+  | Neu r -> [%expr Neu [%e neu_to_ast r ]]
 
-let rec term_to_pat_ast = function
-  | Lam (x, m) -> [%pat? Lam ([%p pstr x], [%p term_to_pat_ast m])]
-  | App (h, sp) -> [%pat? App ([%p term_to_pat_ast h], [%p plist (List.map term_to_pat_ast sp)])]
-  | Var x -> [%pat? Var [%p pstr x]]
-  | MVar x -> {ppat_desc = Ppat_var {txt = x ; loc = Location.none } ; ppat_loc = Location.none ; ppat_attributes = []}
+and neu_to_ast = function
+  | App (h, sp) -> [%expr App ([%e hd_to_ast h], [%e sp_to_ast sp])]
+
+and hd_to_ast = function
+  | Const c -> [%expr Const [%e str c]]
+  | Var x -> [%expr Var [%e int x]]
+  | Meta (u, s) -> [%expr Meta ([%e str u], [%e sub_to_ast s])]
+
+and sp_to_ast = function
+  | Empty -> [%expr Empty]
+  | Cons (m, sp) -> [%expr Cons ([%e nor_to_ast m], [%e sp_to_ast sp])]
+
+and sub_to_ast = function
+  | Shift n -> [%expr Shift [%e int n]]
+  | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])]
+
+
+
+let rec nor_to_pat_ast = function
+  | Lam (x, m) ->  [%pat? Lam ([%p pstr x], [%p nor_to_pat_ast m])]
+  | Neu r -> [%pat? Neu [%p neu_to_pat_ast r ]]
+
+and neu_to_pat_ast = function
+  | App (h, sp) -> [%pat? App ([%p hd_to_pat_ast h], [%p sp_to_pat_ast sp])]
+
+and hd_to_pat_ast = function
+  | Const c -> [%pat? Const [%p pstr c]]
+  | Var x -> [%pat? Var [%p pint x]]
+  | Meta (u, s) ->		(* MMM this ignores s *)
+     {ppat_desc = Ppat_var {txt = u ; loc = Location.none } ; ppat_loc = Location.none ; ppat_attributes = []}
+
+and sp_to_pat_ast = function
+  | Empty -> [%pat? Empty]
+  | Cons (m, sp) -> [%pat? Cons ([%p nor_to_pat_ast m], [%p sp_to_pat_ast sp])]
+
+and sub_to_pat_ast = function
+  | Shift n -> [%pat? Shift [%p pint n]]
+  | Dot (s, m) -> [%pat? Dot ([%p sub_to_pat_ast s], [%p nor_to_pat_ast m])]

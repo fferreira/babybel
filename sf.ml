@@ -6,6 +6,12 @@ type tp
   = TConst of constant
   | Arr of tp * tp
 
+type type_or_kind
+  = Is_kind
+  | Is_type of tp
+
+type signature = (string * type_or_kind) list
+
 type name = string
 
 type var = int
@@ -18,7 +24,7 @@ and neu
 and hd
   = Const of constant
   | Var of var
-  | Meta of var * sub
+  | Meta of name * sub
 and sp
   = Cons of nor * sp
   | Empty
@@ -88,9 +94,9 @@ and infer_head si cD c h =
   try match h with
   | Const a -> List.assoc a si
   | Var x -> lookup_ctx x c
-  | Meta (u, s) ->
-     let (c', t) = lookup_ctx u cD in
-     check_sub si cD c s c' ; t
+  | Meta (u, s) -> assert false
+     (* let (c', t) = lookup_ctx u cD in *)
+     (* check_sub si cD c s c' ; t *)
   with Not_found -> raise Type_checking_failure
 
 let rec above (x : var) (y : var) : bool = x >= y

@@ -17,20 +17,21 @@
 
 %right ARR
 
-%start <Syntax.decl list>  decls
+%start <Sf.signature>  decls
 (* %start <Syntax.ctx_term> ctx_term *)
 %start <Syntax.term> term_expr
 
 %%
 
 tp :
-| c = ID { TConst c }
-| s = tp ARR t = tp { Arr (s, t) }
+| c = ID { Sf.
+TConst c }
+| s = tp ARR t = tp { Sf.Arr (s, t) }
 | LPAREN t = tp RPAREN { t }
 
 kot :
-| TYPE { Is_kind }
-| t = tp { Is_type t}
+| TYPE { Sf.Is_kind }
+| t = tp { Sf.Is_type t}
 
 decl :
 | c = ID COLON kt = kot {(c , kt)}

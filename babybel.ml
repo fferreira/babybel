@@ -5,7 +5,9 @@ open Parsetree
 exception Scanning_error of Lexing.position * string
 exception Syntax_error of Lexing.position
 
-let file_name = "some_filename.bbel"
+let file_name = "unknown"
+
+let sigma : Sf.signature ref = ref []
 
 let parser menhir_parser lexbuf =
   let position = ref (Sflexer.initial_pos file_name) in
@@ -30,14 +32,18 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
     expr = (fun mapper expr ->
   	    match expr with
   	    | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } ->
-	       Astgen.decls_to_ast (parse Sfparser.decls s)
+	       let sigma' = parse Sfparser.decls s in
+	       sigma := sigma' @ !sigma ;
+	       Astgen.decls_to_ast sigma'
   	    | { pexp_desc = Pexp_constant (Const_string (s, Some "term")) } ->
-	       Astgen.term_to_ast (parse Sfparser.term_expr s)
+	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
+	       Astgen.nor_to_ast m
   	    | other -> default_mapper.expr mapper other)
   ; pat = (fun mapper pat ->
 	   match pat with
 	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
-	      Astgen.term_to_pat_ast (parse Sfparser.term_expr s)
+	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
+	      Astgen.nor_to_pat_ast m
 	   | other -> default_mapper.pat mapper other)
   }
 

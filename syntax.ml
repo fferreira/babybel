@@ -1,16 +1,15 @@
-type constant = string
+open Sf
 
-type tp
-  = TConst of constant
-  | Arr of tp * tp
+(* type constant = string *)
 
-type type_or_kind
-  = Is_kind
-  | Is_type of tp
+(* type tp *)
+(*   = TConst of constant *)
+(*   | Arr of tp * tp *)
 
-type decl = string * type_or_kind
 
-type decls = decl list
+(* type decl = string * type_or_kind *)
+
+(* type decls = decl list *)
 
 type var = string
 
