@@ -27,12 +27,18 @@ let parse p s =
 
 let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   { default_mapper with
-    expr = fun mapper expr ->
-  	   match expr with
-  	   | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } ->
-	      Astgen.decls_to_ast (parse Sfparser.decls s)
-  	   | { pexp_desc = Pexp_constant (Const_string (s, Some "term")) } ->
-	      Astgen.term_to_ast (parse Sfparser.term_expr s)
-  	   | other -> default_mapper.expr mapper other ;}
+    expr = (fun mapper expr ->
+  	    match expr with
+  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } ->
+	       Astgen.decls_to_ast (parse Sfparser.decls s)
+  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "term")) } ->
+	       Astgen.term_to_ast (parse Sfparser.term_expr s)
+  	    | other -> default_mapper.expr mapper other)
+  ; pat = (fun mapper pat ->
+	   match pat with
+	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
+	      Astgen.term_to_pat_ast (parse Sfparser.term_expr s)
+	   | other -> default_mapper.pat mapper other)
+  }
 
 let () = register "babybel_mapper" babybel_mapper
