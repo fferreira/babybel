@@ -1,6 +1,5 @@
 open Sf
 
-
 type hat_ctx = string list
 
 exception Lookup_failure of string
@@ -21,7 +20,7 @@ exception Indexing_failure of string
 
 let rec index (s : signature) (c : hat_ctx) (m : Syntax.term) : nor =
   match m with
-  | Syntax.Lam (x, m) -> Lam (x, index s (x :: c) m)
+  | Syntax.Lam (x, m) -> Lam (index s (x :: c) m)
   | Syntax.App (Syntax.Var x, sp) -> Neu(App (lookup_var_const s c x, index_sp s c sp))
   | Syntax.App (Syntax.MVar x, sp) -> assert false
   | Syntax.Var x -> Neu(App (lookup_var_const s c x, Empty))

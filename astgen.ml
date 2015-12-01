@@ -14,7 +14,7 @@ let decl_to_ast = function
 let decls_to_ast ds = list (List.map decl_to_ast ds)
 
 let rec nor_to_ast = function
-  | Lam (x, m) ->  [%expr Lam ([%e str x], [%e nor_to_ast m])]
+  | Lam m ->  [%expr Lam [%e nor_to_ast m]]
   | Neu r -> [%expr Neu [%e neu_to_ast r ]]
   | Meta (u, s) -> (* [%expr Meta ([%e str u], [%e sub_to_ast s])] *)
      { pexp_desc = Pexp_ident { txt = Longident.parse u
@@ -40,7 +40,7 @@ and sub_to_ast = function
   | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])]
 
 let rec nor_to_pat_ast = function
-  | Lam (x, m) ->  [%pat? Lam ([%p pstr x], [%p nor_to_pat_ast m])]
+  | Lam m ->  [%pat? Lam [%p nor_to_pat_ast m]]
   | Meta (u, s) ->
      { ppat_desc = Ppat_var {txt = u ; loc = Location.none }
      ; ppat_loc = Location.none

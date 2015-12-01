@@ -67,8 +67,5 @@ simple_term:
 (* simple_term: *)
 (* | LPAREN m = term RPAREN { m } *)
 
-
-
-
 (* ctx_term : *)
 (* | g = ctx VDASH m = term { g , m } *)

@@ -42,7 +42,7 @@ let load_session unit : unit =
   try
     let f = open_in_bin session_file_name in
     sigma := Marshal.from_channel f ;
-    print_string "Session file loaded\n" ;
+    (* print_string "Session file loaded\n" ; *)
     close_in_noerr f
   with _ -> print_string "No session loaded\n" ; ()
 
