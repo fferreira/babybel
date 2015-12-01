@@ -1,0 +1,5 @@
+ocamlfind ppx_tools/dumpast sample.ml
+
+ocamlfind ppx_tools/rewriter ./babybel.native sample.ml
+
+ocaml -ppx ./babybel.native
