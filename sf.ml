@@ -18,20 +18,23 @@ type var = int
 
 type nor
   = Lam of name * nor
-  | Neu of neu
-and neu
-  = App of hd * sp
-and hd
-  = Const of constant
-  | Var of var
   | Meta of name * sub
-and sp
-  = Cons of nor * sp
-  | Empty
+  | Neu of neu
 
-and sub
-  = Shift of int
-  | Dot of sub * nor
+ and neu
+   = App of hd * sp
+
+ and hd
+   = Const of constant
+   | Var of var
+
+ and sp
+   = Cons of nor * sp
+   | Empty
+
+ and sub
+   = Shift of int
+   | Dot of sub * nor
 
 type sign = (constant * tp) list (* signature for constantructos *)
 type ctx = (name * tp) list (* contexts *)
@@ -66,6 +69,7 @@ let rec check (si : sign) (cD : mctx) (c : ctx) (m : nor) (t: tp) : tp =
   | Lam (x, m), Arr (s, t) ->
      let _ = check si cD ((x, s)::c) m t in
      Arr (s, t)
+  | Meta (u, s), _ -> assert false
   | Neu r, _ -> if t = infer si cD c r then t else raise Type_checking_failure
   | _ -> raise Type_checking_failure
 
@@ -94,12 +98,7 @@ and infer_head si cD c h =
   try match h with
   | Const a -> List.assoc a si
   | Var x -> lookup_ctx x c
-  | Meta (u, s) -> assert false
-     (* let (c', t) = lookup_ctx u cD in *)
-     (* check_sub si cD c s c' ; t *)
   with Not_found -> raise Type_checking_failure
-
-let rec above (x : var) (y : var) : bool = x >= y
 
 (* Simultaneous hereditary substitution *)
 
@@ -109,9 +108,9 @@ let rec hsub_nor (s : sub) (n : nor) : nor =
   match n with
   | Lam (y, n) ->
      Lam (y, hsub_nor (Dot (shift_sub s, top)) n)
+  | Meta (u, s') -> Meta (u, comp_sub s s')
   | Neu(App (Var y, sp)) -> app_spine (lookup_sub y s) (hsub_sp s sp)
   | Neu(App (Const a, sp)) -> Neu(App (Const a, hsub_sp s sp))
-  | Neu(App (Meta (u, s'), sp)) -> Neu(App (Meta (u, comp_sub s s'), hsub_sp s sp))
 
 and hsub_sp (s : sub) (sp : sp) : sp =
   match sp with
@@ -144,12 +143,17 @@ and comp_sub (s : sub) (s' : sub) : sub =
   | s, Dot(s', m) -> Dot(comp_sub s s', hsub_nor s m)
   | Dot (s, m), Shift n -> Dot(comp_sub s (Shift (n - 1)), shift_nor m) (* MMMM *)
 
-
 and lookup_sub x s =
   match x, s with
   | _ , Shift n -> nor_of_var (x + n)
   | 0 , Dot (_, m) -> m
   | x , Dot(s, _) -> lookup_sub (x - 1) s
+
+(* Helper functions *)
+
+let sp_to_nor = function
+  | Cons(Neu(App(m, Empty)), Empty) -> m
+  | _ -> raise Violation
 
 (* Some simple examples *)
 
@@ -192,10 +196,10 @@ let rec decomp (si : sign) (cD : mctx) (cs : constr) : constr list =
      [UN ((x, s)::cPsi, Neu(App(h, append_sp sp top)), m, t)]
 
   (* orientation *)
-  | UN (cPsi, Neu(App(Meta (u, s), Empty)), Neu(App(Meta (v, s'), Empty)), _) ->
-     [cs]
-  | UN (cPsi, m, Neu(App(Meta (v, s'), Empty)), t) ->
-     [UN (cPsi, Neu(App(Meta (v, s'), Empty)), m, t)]
+  (* | UN (cPsi, Neu(App(Meta (u, s), Empty)), Neu(App(Meta (v, s'), Empty)), _) -> *)
+  (*    [cs] *)
+  (* | UN (cPsi, m, Neu(App(Meta (v, s'), Empty)), t) -> *)
+  (*    [UN (cPsi, Neu(App(Meta (v, s'), Empty)), m, t)] *)
 
   (* decomposition of neutrals *)
   | UN (cPsi, Neu(App(h, sp)), Neu(App(h', sp')), _) when h <> h' ->

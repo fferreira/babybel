@@ -1,5 +1,6 @@
 open Sf
 open Parsetree
+open Asttypes
 open Ast_convenience
 
 let rec tp_to_ast = function
@@ -15,6 +16,13 @@ let decls_to_ast ds = list (List.map decl_to_ast ds)
 let rec nor_to_ast = function
   | Lam (x, m) ->  [%expr Lam ([%e str x], [%e nor_to_ast m])]
   | Neu r -> [%expr Neu [%e neu_to_ast r ]]
+  | Meta (u, s) -> (* [%expr Meta ([%e str u], [%e sub_to_ast s])] *)
+     { pexp_desc = Pexp_ident { txt = Longident.parse u
+			      ; loc = Location.none
+			      }
+     ; pexp_loc = Location.none
+     ; pexp_attributes = []
+     }
 
 and neu_to_ast = function
   | App (h, sp) -> [%expr App ([%e hd_to_ast h], [%e sp_to_ast sp])]
@@ -22,7 +30,6 @@ and neu_to_ast = function
 and hd_to_ast = function
   | Const c -> [%expr Const [%e str c]]
   | Var x -> [%expr Var [%e int x]]
-  | Meta (u, s) -> [%expr Meta ([%e str u], [%e sub_to_ast s])]
 
 and sp_to_ast = function
   | Empty -> [%expr Empty]
@@ -32,10 +39,13 @@ and sub_to_ast = function
   | Shift n -> [%expr Shift [%e int n]]
   | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])]
 
-
-
 let rec nor_to_pat_ast = function
   | Lam (x, m) ->  [%pat? Lam ([%p pstr x], [%p nor_to_pat_ast m])]
+  | Meta (u, s) ->
+     { ppat_desc = Ppat_var {txt = u ; loc = Location.none }
+     ; ppat_loc = Location.none
+     ; ppat_attributes = []
+     }
   | Neu r -> [%pat? Neu [%p neu_to_pat_ast r ]]
 
 and neu_to_pat_ast = function
@@ -44,8 +54,6 @@ and neu_to_pat_ast = function
 and hd_to_pat_ast = function
   | Const c -> [%pat? Const [%p pstr c]]
   | Var x -> [%pat? Var [%p pint x]]
-  | Meta (u, s) ->		(* MMM this ignores s *)
-     {ppat_desc = Ppat_var {txt = u ; loc = Location.none } ; ppat_loc = Location.none ; ppat_attributes = []}
 
 and sp_to_pat_ast = function
   | Empty -> [%pat? Empty]

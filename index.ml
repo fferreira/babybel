@@ -25,7 +25,7 @@ let rec index (s : signature) (c : hat_ctx) (m : Syntax.term) : nor =
   | Syntax.App (Syntax.Var x, sp) -> Neu(App (lookup_var_const s c x, index_sp s c sp))
   | Syntax.App (Syntax.MVar x, sp) -> assert false
   | Syntax.Var x -> Neu(App (lookup_var_const s c x, Empty))
-  | Syntax.MVar x -> Neu(App (Meta (x, Shift 0), Empty))
+  | Syntax.MVar x -> Meta (x, Shift 0)
   | _ -> raise (Indexing_failure "non-normal term while indexing")
 
 and index_sp s c = function
