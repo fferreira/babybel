@@ -39,11 +39,15 @@ let rec main_scanner pos = lexer
 | ':' -> add_word pos (Ulexing.lexeme_length lexbuf), COLON
 | '(' -> add_word pos (Ulexing.lexeme_length lexbuf), LPAREN
 | ')' -> add_word pos (Ulexing.lexeme_length lexbuf), RPAREN
+| '[' -> add_word pos (Ulexing.lexeme_length lexbuf), LSQ
+| ']' -> add_word pos (Ulexing.lexeme_length lexbuf), RSQ
+| '/' -> add_word pos (Ulexing.lexeme_length lexbuf), BAR
 | '.' -> add_word pos (Ulexing.lexeme_length lexbuf), DOT
 | '\\' -> add_word pos (Ulexing.lexeme_length lexbuf), FN
 | "->" -> add_word pos (Ulexing.lexeme_length lexbuf), ARR
 | "type" -> add_word pos (Ulexing.lexeme_length lexbuf), TYPE
 | "|-" -> add_word pos (Ulexing.lexeme_length lexbuf), VDASH
+| numeral -> add_word pos (Ulexing.lexeme_length lexbuf), NUM (int_of_string (Ulexing.utf8_lexeme lexbuf))
 | identifier -> add_word pos (Ulexing.lexeme_length lexbuf), ID (Ulexing.utf8_lexeme lexbuf)
 | '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), MVAR (remove_first (Ulexing.utf8_lexeme lexbuf))
 

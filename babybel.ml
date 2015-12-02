@@ -57,7 +57,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
 	       sigma := sigma' @ !sigma ;
 	       save_session !sigma ;
 	       Astgen.decls_to_ast sigma'
-  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "term")) } ->
+  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } ->
 	       load_session() ;
 	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
 	       Astgen.nor_to_ast m

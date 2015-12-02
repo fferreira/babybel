@@ -18,6 +18,10 @@ type term
   | App of term * (term list)
   | Var of var
   | MVar of var
+  | Subst of term * sub
+
+ and sub
+   = term * int
 
 type ctx = (var * tp) list
 

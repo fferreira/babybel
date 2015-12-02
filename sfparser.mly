@@ -11,8 +11,12 @@
 
 %token <string> ID
 %token <string> MVAR
+%token <int> NUM
 %token LPAREN
 %token RPAREN
+%token LSQ
+%token RSQ
+%token BAR
 %token EOF
 
 %right ARR
@@ -50,15 +54,13 @@ term_expr:
 term:
 | m = simple_term+ { match m with |[m] -> m | m::ms -> App (m, ms)}
 | FN x = ID DOT m = term { Lam (x, m) }
+| m = term LSQ n = term BAR v = NUM RSQ { Subst (m, (n, v)) }
+| m = term LSQ n = term RSQ { Subst (m, (n, 0)) }
 
 simple_term:
 | LPAREN m = term RPAREN { m }
 | v = ID { Var v }
 | v = MVAR { MVar v }
-
-(* | ms = simple_term* { Var ("l:"^string_of_int (List.length ms)) } (\* { App (List.hd ms, List.tl ms) } *\) *)
-(* | t = simple_term { t } *)
-(* | m = raw_term { m } *)
 
 (* raw_term: *)
 
