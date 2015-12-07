@@ -54,20 +54,13 @@ term_expr:
 term:
 | m = simple_term+ { match m with |[m] -> m | m::ms -> App (m, ms)}
 | FN x = ID DOT m = term { Lam (x, m) }
-| m = term LSQ n = term BAR v = NUM RSQ { Subst (m, (n, v)) }
-| m = term LSQ n = term RSQ { Subst (m, (n, 0)) }
+| m = term LSQ n = term BAR v = NUM RSQ { AppS (m, (n, v)) }
+| m = term LSQ n = term RSQ { AppS (m, (n, 0)) }
 
 simple_term:
 | LPAREN m = term RPAREN { m }
 | v = ID { Var v }
 | v = MVAR { MVar v }
-
-(* raw_term: *)
-
-(* | LPAREN m = term RPAREN { m } *)
-
-(* simple_term: *)
-(* | LPAREN m = term RPAREN { m } *)
 
 (* ctx_term : *)
 (* | g = ctx VDASH m = term { g , m } *)

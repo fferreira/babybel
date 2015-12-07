@@ -3,6 +3,8 @@ open Parsetree
 open Asttypes
 open Ast_convenience
 
+exception AST_gen_error of string
+
 let rec tp_to_ast = function
   | TConst c -> [%expr TConst [%e str c]]
   | Arr (s, t) -> [%expr Arr([%e tp_to_ast s], [%e tp_to_ast t])]
@@ -16,6 +18,7 @@ let decls_to_ast ds = list (List.map decl_to_ast ds)
 let rec nor_to_ast = function
   | Lam m ->  [%expr Lam [%e nor_to_ast m]]
   | Neu r -> [%expr Neu [%e neu_to_ast r ]]
+  | AppS (m, s) -> [%expr hsub_nor [%e sub_to_ast s] [%e nor_to_ast m]]
   | Meta (u, s) -> (* [%expr Meta ([%e str u], [%e sub_to_ast s])] *)
      { pexp_desc = Pexp_ident { txt = Longident.parse u
 			      ; loc = Location.none
@@ -46,6 +49,7 @@ let rec nor_to_pat_ast = function
      ; ppat_loc = Location.none
      ; ppat_attributes = []
      }
+  | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
   | Neu r -> [%pat? Neu [%p neu_to_pat_ast r ]]
 
 and neu_to_pat_ast = function
