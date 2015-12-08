@@ -24,5 +24,5 @@ let dis = function
   | {p| lam (\x. lam (\y. y x)) |p} -> false
   | e -> raise (Debug e)
 
-let t1 = dis {t| g,y |-  lam (\z. lam (\w. y 'm))  |t}
-let t2 = dis {t| lam (\w. lam (\z. z w))  |t}
+let t1 = dis {t| lam (\z. lam (\w. z w)) |t}
+let t2 = dis {t| lam (\w. lam (\z. z w)) |t}
