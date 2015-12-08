@@ -20,6 +20,7 @@ type nor
   = Lam of nor
   | Meta of name * sub
   | Neu of neu
+  | AppS of nor * sub
 
  and neu
    = App of hd * sp
