@@ -1,3 +1,5 @@
+(* let a _ = assert false *)
+
 type tp
   = Unit
   | Arr of tp * tp
@@ -18,55 +20,77 @@ type (_, _) term
   | Var : ('g, 't) var -> ('g, 't) term
   | C : ('g, unit) term
 
-type _ ctx
-  = Empty : unit ctx
-  | Dec : 'a ctx * 't -> (('a, 't) cons) ctx
+(* type _ ctx *)
+(*   = Empty : unit ctx *)
+(*   | Dec : 'a ctx * 't -> (('a, 't) cons) ctx *)
+
+type (_, _) shift
+  = Id : ('g, 'g) shift
+  | Suc : ('g, 'd) shift  -> ('g, ('d , 't) cons) shift
+
+let rec shift : type g d t. (g, t) var -> (g, d) shift -> (d, t) var =
+  fun v -> function
+	| Id -> v
+	| Suc sh -> Pop (shift v sh)
+
+let rec compose_shift : type g d e. (g, d) shift -> (d, e) shift -> (g, e) shift =
+  fun sh -> function
+	 | Id -> sh
+	 | Suc shh -> Suc (compose_shift sh shh)
 
 type (_, _) ren
-  = EmR : (nil, 'd) ren
+  = ShiftR : ('g, 'd) shift-> ('g, 'd) ren
   | DotR : ('g, 'd) ren * ('d, 't) var -> (('g, 't)cons, 'd) ren
 
-let rec wkn_ren_im : type g d t. (g, d) ren -> (g, (d, t) cons) ren =
+let rec lookup_ren : type g d t. ((g, t) var * (g, d) ren) -> (d, t) var =
   function
-  | EmR -> EmR
-  | DotR (r, v) -> DotR (wkn_ren_im r, Pop v)
+  | Top, DotR (_, v') -> v'
+  | Pop v, DotR (r, _) -> lookup_ren (v, r)
+  | v, ShiftR sh -> (shift v sh)
+
+let rec shift_ren : type g d e. (d, e) shift -> (g, d) ren -> (g , e) ren =
+  fun sh -> function
+	 | ShiftR sh' -> ShiftR (compose_shift sh' sh)
+	 | DotR (r, v) -> DotR(shift_ren sh r, shift v sh)
 
 let wkn_ren : type g d t. (g, d) ren -> ((g, t) cons, (d, t) cons) ren =
-  fun r -> DotR (wkn_ren_im r, Top)
+  fun s -> DotR(shift_ren (Suc Id) s, Top)
 
-let ren : type g d t. (g, t) term -> (g, d) ren -> (d, t) term =
-  fun m r -> assert false
-
-let wkn_term : type g s t. (g, t) term -> ((g, s) cons, t) term =
-  fun m -> assert false
+let rec ren : type g d t. (g, t) term -> (g, d) ren -> (d, t) term =
+  fun m r -> match m with
+  | Lam e -> Lam (ren e (wkn_ren r))
+  | App (f, e) -> App (ren f r, ren e r)
+  | Var v -> Var(lookup_ren (v, r))
+  | C -> C
 
 type (_, _) sub
-  = Em : (nil, 'd) sub (* Optionally: | Em : (nil, 'd) sub *)
+  = Shift : ('g, 'd) shift-> ('g, 'd) sub
   | Dot : ('g, 'd) sub * ('d, 't) term -> (('g, 't)cons, 'd) sub
 
-let rec wkn_sub_im : type g d t. (g, d) sub -> (g, (d, t) cons) sub =
-  function
-  | Em -> Em
-  | Dot (s, m) -> Dot(wkn_sub_im s, wkn_term m)
+let rec shift_term : type g d t. (g, d) shift -> (g, t) term -> (d, t) term =
+  fun sh -> function
+	    | Lam e -> Lam (ren e (DotR (ShiftR (Suc sh), Top)))
+	    | App (f, e) -> App (shift_term sh f, shift_term sh e)
+	    | Var v -> Var (shift v sh)
+	    | C -> C
+
+let rec shift_sub : type g d e. (d, e) shift -> (g, d) sub -> (g , e) sub =
+  fun sh -> function
+	 | Shift sh' -> Shift (compose_shift sh' sh)
+	 | Dot (s, m) -> Dot(shift_sub sh s, shift_term sh m)
 
 let wkn_sub : type g d t. (g, d) sub -> ((g, t) cons, (d, t) cons) sub =
-  fun s -> Dot (wkn_sub_im s, Var Top)
-
-let rec size : type g t. (g, t) term -> int =
-  function
-  | Lam e -> 1 + size e
-  | App (f, e) -> size f + size e
-  | Var _ -> 1
-  | C -> 1
+  fun s -> Dot(shift_sub (Suc Id) s, Var Top)
 
 let rec lookup : type g d t. ((g, t) var * (g, d) sub) -> (d, t) term =
   function
   | Top, Dot (_, m) -> m
   | Pop v, Dot (s, _) -> lookup (v, s)
+  | v, Shift sh -> Var (shift v sh)
 
-let rec sub : type g d t. g ctx -> (g, t) term -> (g, d) sub -> (d, t) term =
-  fun g m s -> match m with
-  | Lam e -> Lam (sub (assert false) e (wkn_sub s))
-  | App (f, e) -> App (sub g f s, sub g e s)
+let rec sub : type g d t. (g, t) term -> (g, d) sub -> (d, t) term =
+  fun m s -> match m with
+  | Lam e -> Lam (sub e (wkn_sub s))
+  | App (f, e) -> App (sub f s, sub e s)
   | Var v -> lookup (v, s)
   | C -> C
