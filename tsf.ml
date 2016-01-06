@@ -2,13 +2,22 @@
 
 let a _ = assert false
 
-type tp
-  = Unit
-  | Arr of tp * tp
+(* type level and singleton contexts *)
 
-type (_, _) arr = Arr
 type (_, _) cons = Cons
 type nil = Nil
+
+type _ ctx
+  = Empty : nil ctx
+  | Dec : 'a ctx * 't -> (('a, 't) cons) ctx
+
+(* Types and sigletons *)
+
+type _ base = B
+
+type (_, _) arr = A
+
+(* Terms *)
 
 type (_, _) var =
   | Top : (('g , 't) cons, 't) var
@@ -17,9 +26,10 @@ type (_, _) var =
 type (_, _) nor
   = Lam : (('g,  's) cons, 't) nor -> ('g, ('s ,'t) arr) nor
   | Neu : ('g, 't) neu -> ('g, 't) nor
+ (* | Neu : ('g, 't base) neu -> ('g, 't base) nor *) (* this option would enforce eta-longness *)
 
  and (_,_) neu
-   = App : ('g, 's) hd * ('g, 's, 't) sp -> ('g, 't) neu (* TODO we need to force 't to be a base type to be eta long *)
+   = App : ('g, 's) hd * ('g, 's, 't) sp -> ('g, 't) neu
 
  and (_,_) hd
    = Var : ('g, 't) var -> ('g, 't) hd
@@ -30,14 +40,11 @@ type (_, _) nor
    = Cons : ('g, 's) nor * ('g, 't, 'w) sp -> ('g, ('s , 't) arr, 'w) sp
    | Empty : ('g, 't, 't) sp
 
-(* type _ ctx *)
-(*   = Empty : unit ctx *)
-(*   | Dec : 'a ctx * 't -> (('a, 't) cons) ctx *)
+(* Shifts of indices *)
 
 type (_, _) shift
   = Id : ('g, 'g) shift
   | Suc : ('g, 'd) shift  -> ('g, ('d , 't) cons) shift
-
 
 let rec shift_var : type g d t. (g, d) shift -> (g, t) var -> (d, t) var =
   fun sh v -> match sh with
@@ -48,6 +55,8 @@ let rec compose_shift : type g d e. (g, d) shift -> (d, e) shift -> (g, e) shift
   fun sh -> function
 	 | Id -> sh
 	 | Suc shh -> Suc (compose_shift sh shh)
+
+(* Renamings *)
 
 type (_, _) ren
   = ShiftR : ('g, 'd) shift-> ('g, 'd) ren
@@ -85,6 +94,8 @@ and ren_sp : type g d s t. (g, d) ren -> (g, s, t) sp -> (d, s, t) sp =
   fun r -> function
 	| Empty -> Empty
 	| Cons (m, sp) -> Cons (ren r m, ren_sp r sp)
+
+(* Substitutions *)
 
 type (_, _) sub
   = Shift : ('g, 'd) shift-> ('g, 'd) sub
@@ -126,7 +137,7 @@ let rec lookup : type g d t. ((g, t) var * (g, d) sub) -> (d, t) nor =
 let rec sub_nor : type g d t. (g, d) sub -> (g, t) nor -> (d, t) nor =
   fun s -> function
 	| Lam m -> Lam (sub_nor (wkn_sub s) m)
-	| Neu(App (Var v, sp)) -> app_sp (lookup (v, s)) (a 1)
+	| Neu(App (Var v, sp)) -> app_sp (lookup (v, s)) (sub_sp s sp)
 	| Neu(App (C, sp)) -> Neu(App (C, sub_sp s sp))
 
 and sub_sp : type g d s t. (g, d) sub -> (g, s, t) sp -> (d, s, t) sp =
