@@ -143,3 +143,7 @@ and sub_tm1 : type s g d t. (s, g, d) sub -> (s, g, t) tm1 -> (s, d, t) tm1 =
   fun s -> function
 	| Lam m -> Lam (sub_tm1 (wkn_sub s) m)
 	| Tm0 n -> Tm0 (sub_tm0 s n)
+
+(* Examples *)
+
+let term_unit : ( (nil, unit base) cons , nil, unit base) tm0 = C (Top, Empty)
