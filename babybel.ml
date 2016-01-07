@@ -4,6 +4,7 @@ open Parsetree
 
 exception Scanning_error of Lexing.position * string
 exception Syntax_error of Lexing.position
+exception Some_error of string
 
 let file_name = "unknown"
 
@@ -48,9 +49,44 @@ let load_session unit : unit =
 
 (* The rewriter *)
 
+let process_value_binding (binding : value_binding) : value_binding =
+  let extract_annotation (_, payload) =
+    match payload with
+    | PStr [str_item] -> (match str_item.pstr_desc with
+			  | Pstr_eval ({pexp_desc = Pexp_constant(Const_string(ann, _))}, _) ->
+			     ann
+			  | _ -> raise (Some_error "type annotation has an unexpected structure"))
+    | PStr _ -> raise (Some_error "really did not expect more than one structure here")
+    | _ -> raise (Some_error "type annotation on unexpected payload")
+
+  in
+  try
+    let typ_ann = parse Sfparser.typ_ann
+			(extract_annotation (List.find (fun ({txt = t}, _) -> t = "type")
+						       binding.pvb_pat.ppat_attributes))
+    in
+    let pat_no_ann = {binding.pvb_pat with ppat_attributes = []} in
+    { binding with
+      pvb_expr = { pexp_desc = Pexp_constraint (binding.pvb_expr, Astgen.typ_ann_to_ast typ_ann)
+		 ; pexp_loc = Location.none
+		 ;  pexp_attributes = []
+		 }
+    ; pvb_pat = pat_no_ann (* MMM removes all other the attributes also *)
+    }
+  with
+    Not_found -> binding
+
+
 let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   { default_mapper with
-    expr = (fun mapper expr ->
+    structure_item = (fun mapper item ->
+    		      match item with
+    		      | { pstr_desc = Pstr_value (rec_flag, bindings)} ->
+    			 let new_desc = Pstr_value(rec_flag, List.map process_value_binding bindings)
+		         (* the type annotations were removed and we can continue the mapping *)
+    			 in default_mapper.structure_item mapper { item with pstr_desc = new_desc }
+    		      | other -> default_mapper.structure_item mapper other)
+  ; expr = (fun mapper expr ->
   	    match expr with
   	    | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } ->
 	       let sigma' = parse Sfparser.decls s in

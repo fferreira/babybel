@@ -20,13 +20,18 @@ type term
   | Var of var
   | MVar of var
 
-
  and sub
    = term * int
 
 type ctx = (var * tp) list
 
 type ctx_term = ctx * term
+
+type typ_ann
+  = BVars of var list * typ_ann
+  | Arr of typ_ann * typ_ann
+  | TAny
+  | CType of var
 
 (* examples *)
 
