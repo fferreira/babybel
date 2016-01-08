@@ -1,223 +1,148 @@
-(* Syntactical framework *)
+(* The intrinsically typed second order syntactical framework (Now with more functors!) *)
 
-type constant = string
+let a _ = assert false
 
-type tp
-  = TConst of constant
-  | Arr of tp * tp
+type _ base = B
+type (_,_) arr = A
 
-type type_or_kind
-  = Is_kind
-  | Is_type of tp
+(* Type level and singleton contexts *)
+type (_, _) cons = Cons
+type nil = Nil
 
-type signature = (string * type_or_kind) list
+type _ ctx
+  = Empty : nil ctx
+  | Dec : 'a ctx * 't -> (('a, 't) cons) ctx
 
-type name = string
+(* The module for the syntactic framework *)
 
-type var = int
+module SyntacticFramework (S : sig type _ constructor end) = struct
 
-type nor
-  = Lam of nor
-  | Meta of name * sub
-  | Neu of neu
-  | AppS of nor * sub
+    (* Terms *)
+    type (_,_) var =
+      | Top : (('g , 'a base) cons, 'a base) var
+      | Pop : ('g, 'a base) var -> (('g, 'b base) cons, 'a base) var
 
- and neu
-   = App of hd * sp
+    type (_,_) tm0
+      = Var : ('g, 'a base) var -> ('g, 'a base) tm0
+      | C : 't S.constructor * ('g, 't,  'a base) sp -> ('g, 'a base) tm0
 
- and hd
-   = Const of constant
-   | Var of var
+     and (_,_,_) sp
+       = Empty : ('g, 't, 't) sp
+       | Cons : ('g, 't) tm1 * ('g, 't2, 't3) sp -> ('g, ('t1, 't2) arr, 't3) sp
 
- and sp
-   = Cons of nor * sp
-   | Empty
+     and (_,_) tm1
+       = Lam : (('g, 'a base) cons, 't) tm1 -> ('g, ('a base, 't) arr) tm1
+       | Tm0 : ('g, 'a base) tm0 -> ('g, 'a base) tm1
 
- and sub
-   = Shift of int
-   | Dot of sub * nor
+    (* Shifts of indices *)
 
-type sign = (constant * tp) list (* signature for constantructos *)
-type ctx = tp list (* contexts *)
-type ctp = ctx * tp (* contextual type *)
-type mctx = (name * ctp) list (* meta contexts *)
+    type (_, _) shift
+      = Id : ('g, 'g) shift
+      | Suc : ('g, 'd) shift  -> ('g, ('d , 'a base) cons) shift
 
-exception Lookup_failure
+    let rec shift_var : type g d a. (g, d) shift -> (g, a base) var -> (d, a base) var =
+      fun sh v -> match sh with
+		  | Id -> v
+		  | Suc sh -> Pop (shift_var sh v)
 
-let rec lookup x c =
-  try List.nth c x
-  with Invalid_argument _ -> raise Lookup_failure
+    let rec compose_shift : type g d e. (g, d) shift -> (d, e) shift -> (g, e) shift =
+      fun sh -> function
+	     | Id -> sh
+	     | Suc shh -> Suc (compose_shift sh shh)
 
-let nor_of_var x = Neu (App (Var x, Empty))
-let top : nor = nor_of_var 0 (* The top variable in the context *)
+    (* Renamings *)
 
-let lookup_ctx x c = lookup x c
+    type (_, _) ren
+      = ShiftR : ('g, 'd) shift-> ('g, 'd) ren
+      | DotR : ('g, 'd) ren * ('d, 'a base) var -> (('g, 'a base)cons, 'd) ren
 
-let rec append_sp (sp : sp) (m : nor) =
-  match sp with
-  | Empty -> Cons (m, Empty)
-  | Cons (n, sp) -> Cons (n, append_sp sp m)
+    let rec lookup_ren : type g d a. ((g, a base) var * (g, d) ren) -> (d, a base) var =
+      function
+      | Top, DotR (_, v') -> v'
+      | Pop v, DotR (r, _) -> lookup_ren (v, r)
+      | v, ShiftR sh -> shift_var sh v
 
-let append_neu (App (h, sp) : neu) (m : nor) =
-  App (h, append_sp sp m)
+    let rec shift_ren : type g d e. (d, e) shift -> (g, d) ren -> (g , e) ren =
+      fun sh -> function
+	     | ShiftR sh' -> ShiftR (compose_shift sh' sh)
+	     | DotR (r, v) -> DotR(shift_ren sh r, shift_var sh v)
 
-(* Type checking *)
+    let wkn_ren : type g d a. (g, d) ren -> ((g, a base) cons, (d, a base) cons) ren =
+      fun s -> DotR(shift_ren (Suc Id) s, Top)
 
-exception Type_checking_failure
+    let rec ren_tm0 : type g d t. (g, d) ren -> (g, t) tm0 -> (d, t) tm0 =
+      fun r -> function
+	    | Var v -> Var (lookup_ren (v, r))
+	    | C (c, sp) -> C (c, ren_sp r sp)
 
-let rec check (si : sign) (cD : mctx) (c : ctx) (m : nor) (t: tp) : tp =
-  match m, t with
-  | Lam m, Arr (s, t) ->
-     let _ = check si cD (s::c) m t in
-     Arr (s, t)
-  | Meta (u, s), _ -> assert false
-  | Neu r, _ -> if t = infer si cD c r then t else raise Type_checking_failure
-  | _ -> raise Type_checking_failure
+    and ren_sp : type g d t t'. (g, d) ren -> (g, t, t') sp -> (d, t, t') sp =
+      fun r -> function
+	    | Empty -> Empty
+	    | Cons (m, sp) -> Cons(ren_tm1 r m, ren_sp r sp)
 
-and check_spine (si : sign) (cD : mctx) (c : ctx) (sp : sp) (t: tp) : tp =
-  match sp, t with
-  | Empty, _ -> t
-  | Cons (m, sp'), Arr(s, t) ->
-     let _ = check si cD c m s in
-     check_spine si cD c sp' t
-  | Cons _, _ -> raise Type_checking_failure
+    and ren_tm1 : type g d t. (g, d) ren -> (g, t) tm1 -> (d, t) tm1 =
+      fun r -> function
+	    | Lam m -> Lam (ren_tm1 (wkn_ren r) m)
+	    | Tm0 n -> Tm0 (ren_tm0 r n)
 
-and check_sub  (si : sign) (cD : mctx) (c : ctx) (s : sub) (c' : ctx) : unit =
-  match s, c' with
-  | Shift 0, c' -> if c = c' then () else raise Type_checking_failure
-  | Shift n, _::c' -> check_sub si cD c s c'
-  | Dot (s, m), t::c' ->
-     check si cD c m t ; check_sub si cD c s c'
+    let rec shift_tm0 : type g d t. (g, d) shift -> (g, t) tm0 -> (d, t) tm0 =
+      fun sh -> function
+	     | Var v -> Var (shift_var sh v)
+	     | C (c, sp) -> C (c, shift_sp sh sp)
 
-and infer si cD c (r : neu) =
-  match r with
-  | App (h, sp) ->
-     let t = infer_head si cD c h in
-     check_spine si cD c sp t
+    and shift_sp : type g d t t1. (g, d) shift -> (g, t, t1) sp -> (d, t, t1) sp =
+      fun sh -> function
+	     | Empty -> Empty
+	     | Cons (m, sp) -> Cons (shift_tm1 sh m, shift_sp sh sp)
 
-and infer_head si cD c h =
-  try match h with
-  | Const a -> List.assoc a si
-  | Var x -> lookup_ctx x c
-  with Not_found -> raise Type_checking_failure
+    and shift_tm1 : type g d t. (g, d) shift -> (g, t) tm1 -> (d, t) tm1 =
+      fun sh -> function
+	     | Lam m -> Lam (ren_tm1 (DotR (ShiftR (Suc sh), Top)) m)
+	     | Tm0 n -> Tm0 (shift_tm0 sh n)
 
-(* Simultaneous hereditary substitution *)
+    (* Substitutions *)
 
-exception Violation (* this is an impossible case *)
+    type (_,_) sub
+      = Shift : ('g, 'd) shift-> ('g, 'd) sub
+      | Dot : ('g, 'd) sub * ('d, 't) tm0 -> (('g, 't)cons, 'd) sub
 
-let rec hsub_nor (s : sub) (n : nor) : nor =
-  match n with
-  | Lam n ->
-     Lam (hsub_nor (Dot (shift_sub s, top)) n)
-  | Meta (u, s') -> Meta (u, comp_sub s s')
-  | Neu(App (Var y, sp)) -> app_spine (lookup_sub y s) (hsub_sp s sp)
-  | Neu(App (Const a, sp)) -> Neu(App (Const a, hsub_sp s sp))
+    let rec lookup : type g d a. ((g, a base) var * (g, d) sub) -> (d, a base) tm0 =
+      function
+      | Top, Dot (_, n) -> n
+      | Pop v, Dot (s, _) -> lookup (v, s)
+      | v, Shift sh -> Var (shift_var sh v)
 
-and hsub_sp (s : sub) (sp : sp) : sp =
-  match sp with
-  | Empty -> Empty
-  | Cons (n, sp) -> Cons(hsub_nor s n, hsub_sp s sp)
+    let rec shift_sub : type g d e. (d, e) shift -> (g, d) sub -> (g , e) sub =
+      fun sh -> function
+	     | Shift sh' -> Shift (compose_shift sh' sh)
+	     | Dot (s, n) -> Dot(shift_sub sh s, shift_tm0 sh n)
 
-and app_spine (m : nor) (sp : sp) : nor =
-  match sp with
-  | Empty -> m
-  | Cons (n, sp) -> app_spine (app_nor_to_nor m n) sp
+    let wkn_sub : type g d a. (g, d) sub -> ((g, a base) cons, (d, a base) cons) sub =
+      fun s -> Dot(shift_sub (Suc Id) s, Var Top)
 
-and app_nor_to_nor (m : nor)(n : nor) : nor =
-  match m with
-  | Lam m -> hsub_nor (Dot (Shift 0, n)) m
-  | Neu(App (m, sp)) -> Neu(App(m, append_sp sp n))
+    let rec sub_tm0 : type g d t. (g, d) sub -> (g, t) tm0 -> (d, t) tm0 =
+      fun s -> function
+	    | Var v -> lookup (v, s)
+	    | C (c, sp) -> C (c, sub_sp s sp)
 
-and shift_nor (m : nor) = hsub_nor (Shift 1) m
+    and sub_sp : type g d t t1. (g, d) sub -> (g, t, t1) sp -> (d, t, t1) sp =
+      fun s -> function
+	    | Empty -> Empty
+	    | Cons (m, sp) -> Cons(sub_tm1 s m, sub_sp s sp)
 
-and shift_sub (s : sub) =
-  match s with
-  | Shift n -> Shift (n + 1)
-  | Dot (s, m) -> Dot (shift_sub s, shift_nor m)
+    and sub_tm1 : type g d t. (g, d) sub -> (g, t) tm1 -> (d, t) tm1 =
+      fun s -> function
+	    | Lam m -> Lam (sub_tm1 (wkn_sub s) m)
+	    | Tm0 n -> Tm0 (sub_tm0 s n)
 
-and comp_sub (s : sub) (s' : sub) : sub =
-  match s, s' with
-  | Shift 0, _ -> s'
-  | s, Shift 0 -> s
-  | Shift n, Shift m -> Shift (n + m)
-  | Shift n, Dot(s', _) -> comp_sub (Shift (n - 1)) s'
-  | s, Dot(s', m) -> Dot(comp_sub s s', hsub_nor s m)
-  | Dot (s, m), Shift n -> Dot(comp_sub s (Shift (n - 1)), shift_nor m) (* MMMM *)
+  end
 
-and lookup_sub x s =
-  match x, s with
-  | _ , Shift n -> nor_of_var (x + n)
-  | 0 , Dot (_, m) -> m
-  | x , Dot(s, _) -> lookup_sub (x - 1) s
+(* Examples *)
 
-(* Helper functions *)
+type _ signature = Unit : (unit base) signature
 
-let sp_to_nor = function
-  | Cons(Neu(App(m, Empty)), Empty) -> m
-  | _ -> raise Violation
 
-(* Some simple examples *)
+module SFU = SyntacticFramework(struct type 'a constructor = 'a signature end)
 
-let id = Lam(Neu(App (Var 0, Empty))) ;;
-let id_tp = Arr (TConst "T", TConst "T");;
-let id_tc = check [] [] [] id id_tp
 
-let f =  Lam (Neu(App (Var 1, Cons (Neu(App (Var 0, Empty)), Empty)))) ;;
-let f_tp = id_tp
-let t_tc = check [] [] [id_tp] f f_tp
-let f' = hsub_nor (Shift 0) f
-let res = f = f'
-let _ = assert res
-
-let f'' = hsub_nor (Dot (Shift 0, id)) f
-let f''_tc = check [] [] [] f'' f_tp
-
-(* Unification *)
-
-type constr
-  = Top
-  | Bottom
-  | UN of ctx * nor * nor * tp 	(* Unify normal *)
-  | USp of ctx * neu * tp * sp * sp
-  | Sol of ctx * unit * nor * tp
-
-(* Local simplification rules *)
-
-(* decomposition *)
-
-let rec decomp (si : sign) (cD : mctx) (cs : constr) : constr list =
-  match cs with
-  (* decomposition of functions *)
-  | UN (cPsi, Lam m, Lam n, Arr (s, t)) ->
-     [UN (s::cPsi, m, n, t)] (* x is just the name of the variable, could be y *)
-
-  | UN (cPsi, Lam m, Neu(App (h, sp)), Arr (s, t)) ->
-     [UN (s::cPsi, m, Neu(App(h, append_sp sp top)), t)]
-  | UN (cPsi, Neu(App (h, sp)), Lam m, Arr (s, t)) ->
-     [UN (s::cPsi, Neu(App(h, append_sp sp top)), m, t)]
-
-  (* orientation *)
-  (* | UN (cPsi, Neu(App(Meta (u, s), Empty)), Neu(App(Meta (v, s'), Empty)), _) -> *)
-  (*    [cs] *)
-  (* | UN (cPsi, m, Neu(App(Meta (v, s'), Empty)), t) -> *)
-  (*    [UN (cPsi, Neu(App(Meta (v, s'), Empty)), m, t)] *)
-
-  (* decomposition of neutrals *)
-  | UN (cPsi, Neu(App(h, sp)), Neu(App(h', sp')), _) when h <> h' ->
-     (* We may stop now, the thing is not unifiable *)
-     [Bottom]
-  | UN (cPsi, Neu(App(h, sp)), Neu(App(h', sp')), _) ->
-     let t = infer_head si cD cPsi h in
-     [USp (cPsi, App (h, Empty), t, sp, sp')]
-
-  (* decomposition of spines *)
-  | USp (cPsi, h, t, Empty, Empty) ->
-     (* Technically it is [Top] but... *)
-     []
-  | USp (cPsi, r, Arr (s, t), Cons (m, sp), Cons (m', sp')) ->
-     UN (cPsi, m, m', s) :: (decomp si cD (USp (cPsi, append_neu r m, t, sp, sp')))
-
-  | _ -> [cs]
-
-(* Unification problem *)
-let rec unify (cD : mctx) (cs : constr list) : constr list = [Bottom]
+let x : (nil, unit base) SFU.tm0 = SFU.C (Unit, Empty)

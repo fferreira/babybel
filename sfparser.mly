@@ -23,7 +23,7 @@
 
 %right ARR
 
-%start <Sf.signature>  decls
+%start <Usf.signature>  decls
 (* %start <Syntax.ctx_term> ctx_term *)
 %start <Syntax.term> term_expr
 %start <Syntax.typ_ann> typ_ann
@@ -31,14 +31,13 @@
 %%
 
 tp :
-| c = ID { Sf.
-TConst c }
-| s = tp ARR t = tp { Sf.Arr (s, t) }
+| c = ID { Usf.TConst c }
+| s = tp ARR t = tp { Usf.Arr (s, t) }
 | LPAREN t = tp RPAREN { t }
 
 kot :
-| TYPE { Sf.Is_kind }
-| t = tp { Sf.Is_type t}
+| TYPE { Usf.Is_kind }
+| t = tp { Usf.Is_type t}
 
 decl :
 | c = ID COLON kt = kot {(c , kt)}

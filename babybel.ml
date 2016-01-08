@@ -8,7 +8,7 @@ exception Some_error of string
 
 let file_name = "unknown"
 
-let sigma : Sf.signature ref = ref []
+let sigma : Usf.signature ref = ref []
 
 (* Parsing *)
 
@@ -34,7 +34,7 @@ let parse p s =
 
 let session_file_name = "session.bb"
 
-let save_session (s : Sf.signature) : unit =
+let save_session (s : Usf.signature) : unit =
   let f = open_out_bin session_file_name in
   Marshal.to_channel f !sigma [] ;
   close_out_noerr f
@@ -76,35 +76,57 @@ let process_value_binding (binding : value_binding) : value_binding =
   with
     Not_found -> binding
 
+let is_signature : structure_item -> bool = function
+  | {pstr_desc = Pstr_attribute({txt = "signature"}, _)} -> true
+  | _ -> false
+
+let expand_signature : structure_item -> structure = function
+  | {pstr_desc = Pstr_attribute({txt = "signature"}
+			       , PStr [{pstr_desc =
+					  Pstr_eval({pexp_desc =
+						       Pexp_constant (Const_string (s, _))},_)}])} ->
+     let sigma' = parse Sfparser.decls s in
+     if !sigma = []
+     then sigma := sigma'
+     else raise (Some_error "Multiple declaration blocks in the same session") ;
+     save_session !sigma ;
+     Astgen.decls_to_ast sigma'
+  | _ -> raise (Some_error "Violation: expand_signature called on an element lacking the right attribute")
+
+let rec process_structure : structure -> structure = function
+  | [] -> []
+  | st::sts when is_signature st -> expand_signature st @ process_structure sts
+  | st::sts -> st::(process_structure sts)
 
 let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   { default_mapper with
-    structure_item = (fun mapper item ->
-    		      match item with
-    		      | { pstr_desc = Pstr_value (rec_flag, bindings)} ->
-    			 let new_desc = Pstr_value(rec_flag, List.map process_value_binding bindings)
-		         (* the type annotations were removed and we can continue the mapping *)
-    			 in default_mapper.structure_item mapper { item with pstr_desc = new_desc }
-    		      | other -> default_mapper.structure_item mapper other)
-  ; expr = (fun mapper expr ->
-  	    match expr with
-  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } ->
-	       let sigma' = parse Sfparser.decls s in
-	       sigma := sigma' @ !sigma ;
-	       save_session !sigma ;
-	       Astgen.decls_to_ast sigma'
-  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } ->
-	       load_session() ;
-	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
-	       Astgen.nor_to_ast m
-  	    | other -> default_mapper.expr mapper other)
-  ; pat = (fun mapper pat ->
-	   match pat with
-	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
-	      load_session () ;
-	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
-	      Astgen.nor_to_pat_ast m
-	   | other -> default_mapper.pat mapper other)
+    structure = (fun mapper structure -> default_mapper.structure mapper (process_structure structure))
+  (* ; structure_item = (fun mapper item -> *)
+  (*   		      match item with *)
+  (*   		      | { pstr_desc = Pstr_value (rec_flag, bindings)} -> *)
+  (*   			 let new_desc = Pstr_value(rec_flag, List.map process_value_binding bindings) *)
+  (* 		         (\* the type annotations were removed and we can continue the mapping *\) *)
+  (*   			 in default_mapper.structure_item mapper { item with pstr_desc = new_desc } *)
+  (*   		      | other -> default_mapper.structure_item mapper other) *)
+  (* ; expr = (fun mapper expr -> *)
+  (* 	    match expr with *)
+  (* 	    (\* | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } -> *\) *)
+  (* 	    (\*    let sigma' = parse Sfparser.decls s in *\) *)
+  (* 	    (\*    sigma := sigma' @ !sigma ; *\) *)
+  (* 	    (\*    save_session !sigma ; *\) *)
+  (* 	    (\*    Astgen.decls_to_ast sigma' *\) *)
+  (* 	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } -> *)
+  (* 	       load_session() ; *)
+  (* 	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in *)
+  (* 	       Astgen.nor_to_ast m *)
+  (* 	    | other -> default_mapper.expr mapper other) *)
+  (* ; pat = (fun mapper pat -> *)
+  (* 	   match pat with *)
+  (* 	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} -> *)
+  (* 	      load_session () ; *)
+  (* 	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in *)
+  (* 	      Astgen.nor_to_pat_ast m *)
+  (* 	   | other -> default_mapper.pat mapper other) *)
   }
 
 let () = register "babybel_mapper" babybel_mapper
