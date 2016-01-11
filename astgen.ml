@@ -162,39 +162,30 @@ let decls_to_ast ds =
   List.map generate_new_type tps @ [generate_constr_type cons] @ [sf_instance; open_sf]
 
 
-let rec nor_to_ast = function
-  | _ -> assert false
-  (* | Lam m ->  [%expr Lam [%e nor_to_ast m]] *)
-  (* | Neu r -> [%expr Neu [%e neu_to_ast r ]] *)
-  (* | AppS (m, s) -> [%expr hsub_nor [%e sub_to_ast s] [%e nor_to_ast m]] *)
-  (* | Meta (u, s) -> *)
-  (*    { pexp_desc = Pexp_ident { txt = Longident.parse u *)
-  (* 			      ; loc = Location.none *)
-  (* 			      } *)
-  (*    ; pexp_loc = Location.none *)
-  (*    ; pexp_attributes = [] *)
-  (*    } *)
+let rec t1_to_ast = function
+  | Lam m ->  [%expr Lam [%e t1_to_ast m]]
+  | Tm0 r -> [%expr Tm0 [%e t0_to_ast r ]]
+  | AppS (m, s) ->  assert false (* [%expr hsub_nor [%e sub_to_ast s] [%e nor_to_ast m]] *)
+  | Meta u ->
+     { pexp_desc = Pexp_ident (wrap (Longident.parse u))
+     ; pexp_loc = Location.none
+     ; pexp_attributes = []
+     }
 
-and neu_to_ast = function
-  | _ -> assert false
-  (* | App (h, sp) -> [%expr App ([%e hd_to_ast h], [%e sp_to_ast sp])] *)
-
-and hd_to_ast = function
-  | _ -> assert false
-  (* | Const c -> [%expr Const [%e str c]] *)
-  (* | Var x -> [%expr Var [%e int x]] *)
+and t0_to_ast = function
+  | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
+  | Var x -> assert false
 
 and sp_to_ast = function
-  | _ -> assert false
-  (* | Empty -> [%expr Empty] *)
-  (* | Cons (m, sp) -> [%expr Cons ([%e nor_to_ast m], [%e sp_to_ast sp])] *)
+  | Empty -> [%expr Empty]
+  | Cons (m, sp) -> [%expr Cons ([%e t1_to_ast m], [%e sp_to_ast sp])]
 
 and sub_to_ast = function
   | _ -> assert false
   (* | Shift n -> [%expr Shift [%e int n]] *)
   (* | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])] *)
 
-let rec nor_to_pat_ast = function
+let rec t1_to_pat_ast = function
   | _ -> assert false
   (* | Lam m ->  [%pat? Lam [%p nor_to_pat_ast m]] *)
   (* | Meta (u, s) -> *)

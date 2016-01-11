@@ -100,7 +100,9 @@ let rec process_structure : structure -> structure = function
 
 let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   { default_mapper with
+    (* generate the signature and the SF *)
     structure = (fun mapper structure -> default_mapper.structure mapper (process_structure structure))
+    (* process type annotations *)
   (* ; structure_item = (fun mapper item -> *)
   (*   		      match item with *)
   (*   		      | { pstr_desc = Pstr_value (rec_flag, bindings)} -> *)
@@ -108,24 +110,21 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   (* 		         (\* the type annotations were removed and we can continue the mapping *\) *)
   (*   			 in default_mapper.structure_item mapper { item with pstr_desc = new_desc } *)
   (*   		      | other -> default_mapper.structure_item mapper other) *)
-  (* ; expr = (fun mapper expr -> *)
-  (* 	    match expr with *)
-  (* 	    (\* | { pexp_desc = Pexp_constant (Const_string (s, Some "def")) } -> *\) *)
-  (* 	    (\*    let sigma' = parse Sfparser.decls s in *\) *)
-  (* 	    (\*    sigma := sigma' @ !sigma ; *\) *)
-  (* 	    (\*    save_session !sigma ; *\) *)
-  (* 	    (\*    Astgen.decls_to_ast sigma' *\) *)
-  (* 	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } -> *)
-  (* 	       load_session() ; *)
-  (* 	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in *)
-  (* 	       Astgen.nor_to_ast m *)
-  (* 	    | other -> default_mapper.expr mapper other) *)
+  (* translate tems in expressions *)
+  ; expr = (fun mapper expr ->
+  	    match expr with
+  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } ->
+  	       load_session() ;
+  	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
+  	       Astgen.t1_to_ast m
+  	    | other -> default_mapper.expr mapper other)
+  (* translate patterns in expressions  *)
   (* ; pat = (fun mapper pat -> *)
   (* 	   match pat with *)
   (* 	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} -> *)
   (* 	      load_session () ; *)
   (* 	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in *)
-  (* 	      Astgen.nor_to_pat_ast m *)
+  (* 	      Astgen.t1_to_pat_ast m *)
   (* 	   | other -> default_mapper.pat mapper other) *)
   }
 
