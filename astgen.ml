@@ -30,6 +30,24 @@ let sf_instance_name = "SFU"
 (* wraps a value in a loc record *)
 let wrap c = { txt = c ; loc = Location.none }
 
+(* utility functions for dealing with ast *)
+
+let wrap_in_signature t  =
+  { ptyp_desc = Ptyp_constr ( wrap (Lident signature_typ_name), [t])
+  ; ptyp_loc = Location.none
+  ; ptyp_attributes = []
+  }
+
+let build_base_typ s =
+  { ptyp_desc = Ptyp_constr ( wrap (Lident "base")
+			    , [{ ptyp_desc = Ptyp_constr (wrap (Lident s), [])
+			       ; ptyp_loc = Location.none
+			       ; ptyp_attributes = []
+			       }])
+  ; ptyp_loc = Location.none
+  ; ptyp_attributes = []
+  }
+
 let decls_to_ast ds =
   (* generate an ocaml type for each kind in the signature *)
   let generate_new_type = function
@@ -77,22 +95,6 @@ let decls_to_ast ds =
     in
     (* generate a constructor available for the signature *)
     let generate_constructor =
-      let wrap_in_signature t  =
-	{ ptyp_desc = Ptyp_constr ( wrap (Lident signature_typ_name), [t])
-	; ptyp_loc = Location.none
-	; ptyp_attributes = []
-	}
-      in
-      let build_base_typ s =
-	{ ptyp_desc = Ptyp_constr ( wrap (Lident "base")
-				  , [{ ptyp_desc = Ptyp_constr (wrap (Lident s), [])
-				     ; ptyp_loc = Location.none
-				     ; ptyp_attributes = []
-				     }])
-	; ptyp_loc = Location.none
-	; ptyp_attributes = []
-	}
-      in
       let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
 	| TConst n -> build_base_typ (typ_name n)
 	| Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
@@ -193,38 +195,37 @@ and sub_to_ast = function
   (* | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])] *)
 
 let rec t1_to_pat_ast = function
-  | _ -> assert false
-  (* | Lam m ->  [%pat? Lam [%p nor_to_pat_ast m]] *)
-  (* | Meta (u, s) -> *)
-  (*    { ppat_desc = Ppat_var {txt = u ; loc = Location.none } *)
-  (*    ; ppat_loc = Location.none *)
-  (*    ; ppat_attributes = [] *)
-  (*    } *)
-  (* | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns") *)
-  (* | Neu r -> [%pat? Neu [%p neu_to_pat_ast r ]] *)
+  | Lam m ->  [%pat? Lam [%p t1_to_pat_ast m]]
+  | Tm0 r -> [%pat? Tm0 [%p t0_to_pat_ast r ]]
+  | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
+  | Meta u ->
+     { ppat_desc = Ppat_var {txt = u ; loc = Location.none }
+     ; ppat_loc = Location.none
+     ; ppat_attributes = []
+     }
 
-and neu_to_pat_ast = function
-  | _ -> assert false
-  (* | App (h, sp) -> [%pat? App ([%p hd_to_pat_ast h], [%p sp_to_pat_ast sp])] *)
+and t0_to_pat_ast = function
+  | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]
+  | Var x -> assert false
 
-and hd_to_pat_ast = function
-  | _ -> assert false
+(* and hd_to_pat_ast = function *)
+(*   | _ -> assert false *)
   (* | Const c -> [%pat? Const [%p pstr c]] *)
   (* | Var x -> [%pat? Var [%p pint x]] *)
 
 and sp_to_pat_ast = function
-  | _ -> assert false
-  (* | Empty -> [%pat? Empty] *)
-  (* | Cons (m, sp) -> [%pat? Cons ([%p nor_to_pat_ast m], [%p sp_to_pat_ast sp])] *)
+  | Empty -> [%pat? Empty]
+  | Cons (m, sp) -> [%pat? Cons ([%p t1_to_pat_ast m], [%p sp_to_pat_ast sp])]
 
-and sub_to_pat_ast = function
-  | _ -> assert false
+(* and sub_to_pat_ast = function *)
+(*   | _ -> assert false *)
   (* | Shift n -> [%pat? Shift [%p pint n]] *)
   (* | Dot (s, m) -> [%pat? Dot ([%p sub_to_pat_ast s], [%p nor_to_pat_ast m])] *)
 
-let rec typ_ann_to_ast = function
-  | _ -> assert false
-  (* | Syntax.BVars (vs, t) -> assert false *)
-  (* | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast t1] -> [%t typ_ann_to_ast t2]] *)
-  (* | Syntax.TAny -> [%type: _] *)
-  (* | Syntax.CType _ -> [%type: Sf.nor] *)
+let rec typ_ann_to_ast =
+  let foo s = build_base_typ s in
+  function
+  | Syntax.BVars (vs, t) -> assert false
+  | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast t1] -> [%t typ_ann_to_ast t2]]
+  | Syntax.TAny -> [%type: _]
+  | Syntax.CType s -> [%type: ('a, [%t foo (typ_name s)]) tm1]

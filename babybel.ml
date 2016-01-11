@@ -103,13 +103,13 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
     (* generate the signature and the SF *)
     structure = (fun mapper structure -> default_mapper.structure mapper (process_structure structure))
     (* process type annotations *)
-  (* ; structure_item = (fun mapper item -> *)
-  (*   		      match item with *)
-  (*   		      | { pstr_desc = Pstr_value (rec_flag, bindings)} -> *)
-  (*   			 let new_desc = Pstr_value(rec_flag, List.map process_value_binding bindings) *)
-  (* 		         (\* the type annotations were removed and we can continue the mapping *\) *)
-  (*   			 in default_mapper.structure_item mapper { item with pstr_desc = new_desc } *)
-  (*   		      | other -> default_mapper.structure_item mapper other) *)
+  ; structure_item = (fun mapper item ->
+    		      match item with
+    		      | { pstr_desc = Pstr_value (rec_flag, bindings)} ->
+    			 let new_desc = Pstr_value(rec_flag, List.map process_value_binding bindings)
+  		         (* the type annotations were removed and we can continue the mapping *)
+    			 in default_mapper.structure_item mapper { item with pstr_desc = new_desc }
+    		      | other -> default_mapper.structure_item mapper other)
   (* translate tems in expressions *)
   ; expr = (fun mapper expr ->
   	    match expr with
@@ -119,13 +119,13 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   	       Astgen.t1_to_ast m
   	    | other -> default_mapper.expr mapper other)
   (* translate patterns in expressions  *)
-  (* ; pat = (fun mapper pat -> *)
-  (* 	   match pat with *)
-  (* 	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} -> *)
-  (* 	      load_session () ; *)
-  (* 	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in *)
-  (* 	      Astgen.t1_to_pat_ast m *)
-  (* 	   | other -> default_mapper.pat mapper other) *)
+  ; pat = (fun mapper pat ->
+  	   match pat with
+  	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
+  	      load_session () ;
+  	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
+  	      Astgen.t1_to_pat_ast m
+  	   | other -> default_mapper.pat mapper other)
   }
 
 let () = register "babybel_mapper" babybel_mapper
