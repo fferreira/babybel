@@ -7,20 +7,35 @@ open Longident
 
 exception AST_gen_error of string
 
-let rec tp_to_ast = function
-  | TConst c -> [%expr TConst [%e str c]]
-  | Arr (s, t) -> [%expr Arr([%e tp_to_ast s], [%e tp_to_ast t])]
+(* how to generate names and other configurations*)
 
-let decl_to_ast = function
-  | c, Is_kind -> [%expr [%e str c], Is_kind]
-  | c, Is_type t -> let ta = tp_to_ast t in [%expr [%e str c], Is_type [%e ta]]
+let typ_name n = "tp_" ^ n
+let con_name n = "CON_" ^ n
+let unique_con_name n = "T" ^ n
+let signature_typ_name = "signature"
+let sf_module_name = "SyntacticFramework"
+let sf_signature_typ_name = "constructor"
+let sf_instance_name = "SFU"
+
+(* Generate ASTs *)
+
+(* let rec tp_to_ast = function *)
+(*   | TConst c -> [%expr TConst [%e str c]] *)
+(*   | Arr (s, t) -> [%expr Arr([%e tp_to_ast s], [%e tp_to_ast t])] *)
+
+(* let decl_to_ast = function *)
+(*   | c, Is_kind -> [%expr [%e str c], Is_kind] *)
+(*   | c, Is_type t -> let ta = tp_to_ast t in [%expr [%e str c], Is_type [%e ta]] *)
+
+(* wraps a value in a loc record *)
+let wrap c = { txt = c ; loc = Location.none }
 
 let decls_to_ast ds =
   (* generate an ocaml type for each kind in the signature *)
   let generate_new_type = function
     | (n, Is_kind) ->
        (* constructors *)
-       let cons = { pcd_name = {txt = "T" ^ n ; loc = Location.none}
+       let cons = { pcd_name = wrap (unique_con_name n)
 		  ; pcd_args = []
 		  ; pcd_res = None
 		  ; pcd_loc = Location.none
@@ -28,7 +43,7 @@ let decls_to_ast ds =
 		  }
        in
        (* type *)
-       { pstr_desc = Pstr_type ([{ ptype_name = {txt = "tp_" ^ n ; loc = Location.none}
+       { pstr_desc = Pstr_type ([{ ptype_name = wrap (typ_name n)
 				 ; ptype_params = []
 				 ; ptype_cstrs = []
 				 ; ptype_kind = Ptype_variant [cons]
@@ -45,7 +60,7 @@ let decls_to_ast ds =
   let generate_constr_type cons =
     (* having the constructors build the type *)
     let signature cons_trees =
-       { pstr_desc = Pstr_type ([{ ptype_name = {txt = "signature" ; loc = Location.none}
+       { pstr_desc = Pstr_type ([{ ptype_name = wrap signature_typ_name
 				 ; ptype_params = [{ ptyp_desc = Ptyp_any
 						   ; ptyp_loc = Location.none
 						   ; ptyp_attributes = []
@@ -62,51 +77,89 @@ let decls_to_ast ds =
     in
     (* generate a constructor available for the signature *)
     let generate_constructor =
+      let build_base_typ s =
+	{ ptyp_desc = Ptyp_constr ({txt = Lident "base" ; loc = Location.none},
+				   [{ ptyp_desc = Ptyp_constr (wrap (Lident s), [])
+				    ; ptyp_loc = Location.none
+				    ; ptyp_attributes = []}])
+	; ptyp_loc = Location.none
+	; ptyp_attributes = []
+	}
+      in
       let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
-	| TConst n -> { ptyp_desc = Ptyp_constr({txt = Lident ("tp_" ^ n) ; loc = Location.none}, [])
-		      ; ptyp_loc = Location.none
-		      ; ptyp_attributes = []
-		      }
-	| Arr (t1, t2) -> [%type: [%t generate_core_type t1] -> [%t generate_core_type t2]]
-      in
-      let rec constructor_params = function
-	| TConst _ -> []
-	| Arr (t1, t2) -> generate_core_type t1 :: constructor_params t2
-      in
-      let rec get_constructed_type = function
-	| TConst t -> "tp_" ^ t
-	| Arr (_, t) -> get_constructed_type t
+	| TConst n -> build_base_typ (typ_name n)
+	| Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
       in
       function (name, Is_type t) ->
-	       let build_ret_typ s =
-		 { ptyp_desc = Ptyp_constr ({txt = Lident "signature" ; loc = Location.none},
-					    [{ ptyp_desc =
-						 Ptyp_constr ({txt = Lident "base" ; loc = Location.none},
-							      [{ ptyp_desc = Ptyp_constr ({ txt = Lident s
-											  ; loc = Location.none
-											  }, [])
-							       ; ptyp_loc = Location.none
-							       ; ptyp_attributes = []
-							       }])
-					     ; ptyp_loc = Location.none
-					     ; ptyp_attributes = []
-					     }])
-		 ; ptyp_loc = Location.none
-		 ; ptyp_attributes = []
-		 }
-	       in
-	       { pcd_name = {txt = "CON_" ^ name ; loc = Location.none}
-	       ; pcd_args = constructor_params t (* MMMM this is wrong, it should all be in pcd_res and arrs instead of -> (pirate function types) *)
-	       ; pcd_res = Some (build_ret_typ (get_constructed_type t)) (* MMM see previous line's comment *)
+	       { pcd_name = wrap (con_name name)
+	       ; pcd_args = []
+	       ; pcd_res = Some (generate_core_type t)
 	       ; pcd_loc = Location.none
 	       ; pcd_attributes = []
 	       }
-	     | _ -> raise (AST_gen_error "Violation: generate_constructor")
+	     | _ -> raise (AST_gen_error "Violation: generate_core_type")
     in
     signature (List.map generate_constructor cons)
   in
+  (* Instance of the functor with the module applied *)
+  let sf_instance =
+    let module_desc d =
+      { pmod_desc = d
+      ; pmod_loc = Location.none
+      ; pmod_attributes = []
+      }
+    in
+    let sf_mod_apply =
+      Pmod_structure
+        [{pstr_desc =
+            Pstr_type
+              [{ ptype_name = wrap sf_signature_typ_name
+	       ; ptype_params = [({ ptyp_desc = Ptyp_var "a"
+				  ; ptyp_loc = Location.none
+				  ; ptyp_attributes = []
+				  }, Invariant)]
+	       ; ptype_cstrs = []
+	       ; ptype_kind = Ptype_abstract
+               ; ptype_private = Public
+               ; ptype_manifest =
+                  Some
+                    { ptyp_desc =
+			Ptyp_constr ( wrap (Lident signature_typ_name)
+				    , [{ ptyp_desc = Ptyp_var "a"
+				       ; ptyp_loc = Location.none
+				       ; ptyp_attributes = []
+				       }])
+		    ; ptyp_loc = Location.none
+		    ; ptyp_attributes = []
+		    }
+	       ; ptype_attributes = []
+	       ; ptype_loc = Location.none
+	       }]
+	 ; pstr_loc = Location.none
+	 }]
+    in
+    { pstr_desc = Pstr_module
+		    { pmb_name = wrap sf_instance_name
+		    ; pmb_expr = module_desc (Pmod_apply
+						( module_desc (Pmod_ident (wrap (Lident sf_module_name)))
+						, module_desc sf_mod_apply))
+		    ; pmb_attributes = []
+		    ; pmb_loc = Location.none
+		    }
+    ; pstr_loc = Location.none
+    }
+  in
+  let open_sf =  { pstr_desc =
+		     Pstr_open { popen_lid = wrap (Lident sf_instance_name)
+			       ; popen_override = Fresh
+			       ; popen_loc = Location.none
+			       ; popen_attributes = []
+			       }
+		 ; pstr_loc = Location.none
+		 }
+  in
   let (tps, cons) = List.partition (function _, Is_kind -> true | _ -> false) ds in
-  List.map generate_new_type tps @ [generate_constr_type cons]
+  List.map generate_new_type tps @ [generate_constr_type cons] @ [sf_instance; open_sf]
 
 
 let rec nor_to_ast = function
