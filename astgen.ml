@@ -77,11 +77,18 @@ let decls_to_ast ds =
     in
     (* generate a constructor available for the signature *)
     let generate_constructor =
+      let wrap_in_signature t  =
+	{ ptyp_desc = Ptyp_constr ( wrap (Lident signature_typ_name), [t])
+	; ptyp_loc = Location.none
+	; ptyp_attributes = []
+	}
+      in
       let build_base_typ s =
-	{ ptyp_desc = Ptyp_constr ({txt = Lident "base" ; loc = Location.none},
-				   [{ ptyp_desc = Ptyp_constr (wrap (Lident s), [])
-				    ; ptyp_loc = Location.none
-				    ; ptyp_attributes = []}])
+	{ ptyp_desc = Ptyp_constr ( wrap (Lident "base")
+				  , [{ ptyp_desc = Ptyp_constr (wrap (Lident s), [])
+				     ; ptyp_loc = Location.none
+				     ; ptyp_attributes = []
+				     }])
 	; ptyp_loc = Location.none
 	; ptyp_attributes = []
 	}
@@ -93,7 +100,7 @@ let decls_to_ast ds =
       function (name, Is_type t) ->
 	       { pcd_name = wrap (con_name name)
 	       ; pcd_args = []
-	       ; pcd_res = Some (generate_core_type t)
+	       ; pcd_res = Some (wrap_in_signature (generate_core_type t))
 	       ; pcd_loc = Location.none
 	       ; pcd_attributes = []
 	       }
