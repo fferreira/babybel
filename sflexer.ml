@@ -45,6 +45,7 @@ let rec main_scanner pos = lexer
 | "|}" -> add_word pos (Ulexing.lexeme_length lexbuf), RBOX
 | '/' -> add_word pos (Ulexing.lexeme_length lexbuf), BAR
 | '.' -> add_word pos (Ulexing.lexeme_length lexbuf), DOT
+| ',' -> add_word pos (Ulexing.lexeme_length lexbuf), COMMA
 | '\\' -> add_word pos (Ulexing.lexeme_length lexbuf), FN
 | "->" -> add_word pos (Ulexing.lexeme_length lexbuf), ARR
 | "type" -> add_word pos (Ulexing.lexeme_length lexbuf), TYPE

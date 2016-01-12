@@ -23,7 +23,11 @@ type term
  and sub
    = term * int
 
-type ctx = (var * tp) list
+type ctx
+  = Empty
+  | CtxVar of var
+  | Cons of ctx * var * Usf.tp
+
 
 type ctx_term = ctx * term
 

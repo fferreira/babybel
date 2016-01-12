@@ -6,6 +6,7 @@
 %token FN
 %token DOT
 %token COLON
+%token COMMA
 %token TYPE
 %token VDASH
 
@@ -24,7 +25,7 @@
 %right ARR
 
 %start <Usf.signature>  decls
-(* %start <Syntax.ctx_term> ctx_term *)
+%start <Syntax.ctx_term> ctx_term
 %start <Syntax.term> term_expr
 %start <Syntax.typ_ann> typ_ann
 
@@ -46,8 +47,11 @@ decls :
 | EOF { [] }
 | d = decl DOT ds = decls { d :: ds}
 
-(* ctx: *)
-(* | v = ID { [] } *)
+ctx:
+| DOT  { Empty } (* empty context *)
+| g = ID { CtxVar g } (* context variable (in patterns only) *)
+| v = ID COLON vv = ID  { Cons (Empty, v, Usf.TConst vv) } (* unary context *)
+| g = ctx COMMA v = ID COLON t = tp { Cons (g, v, t) }
 
 term_expr:
 | m = term EOF { m}
@@ -63,8 +67,10 @@ simple_term:
 | v = ID { Var v }
 | v = MVAR { MVar v }
 
-(* ctx_term : *)
-(* | g = ctx VDASH m = term { g , m } *)
+ctx_term :
+| g = ctx VDASH m = term EOF { g , m }
+| VDASH m = term EOF { Empty , m }
+| m = term EOF { Empty , m }
 
 typ_ann_no_eof:
 | vs = ID* { if List.length vs > 1 then TAny None else TAny (Some (List.hd vs))}

@@ -120,7 +120,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   	    match expr with
   	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } ->
   	       load_session() ;
-  	       let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
+  	       let m = Index.index !sigma (parse Sfparser.ctx_term s) in
   	       Astgen.t1_to_ast m
   	    | other -> default_mapper.expr mapper other)
   (* translate patterns in expressions  *)
@@ -128,7 +128,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   	   match pat with
   	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
   	      load_session () ;
-  	      let m = Index.index !sigma [] (parse Sfparser.term_expr s) in
+  	      let m = Index.index !sigma (parse Sfparser.ctx_term s) in
   	      Astgen.t1_to_pat_ast m
   	   | other -> default_mapper.pat mapper other)
   }
