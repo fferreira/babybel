@@ -1,8 +1,8 @@
 open Sf
 
-exception Debug of Sf.nor
+exception Debug
 
-let _ = {def|
+[@@@signature {def|
 
 tm : type.
 z : tm.
@@ -12,17 +12,17 @@ app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 fix : (tm -> tm) -> tm.
 
-|def}
+|def}]
 
-let f e = match e with
+let size [@type "{|tm|} -> int"] = function
   | {p| z |p} -> 0
   | {p| lam (\x. 'm) |p} -> 1
-  | _ -> raise (Debug e)
+  | _ -> raise Debug
 
-let dis = function
-  | {p| lam (\x. lam (\y. x y)) |p} -> true
-  | {p| lam (\x. lam (\y. y x)) |p} -> false
-  | e -> raise (Debug e)
+let dis [@type "{|tm|} -> bool"] = function
+  | {p| lam (\x. lam (\y. app x y)) |p} -> true
+  | {p| lam (\x. lam (\y. app y x)) |p} -> false
+  | e -> raise Debug
 
-let t1 = dis {t| lam (\z. lam (\w. z w)) |t}
-let t2 = dis {t| lam (\w. lam (\z. z w)) |t}
+let t1 = dis {t| lam (\z. lam (\w. app z w)) |t}
+let t2 = dis {t| lam (\w. lam (\z. app z w)) |t}

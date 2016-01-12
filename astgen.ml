@@ -153,6 +153,9 @@ let decls_to_ast ds =
   let (tps, cons) = List.partition (function _, Is_kind -> true | _ -> false) ds in
   List.map generate_new_type tps @ [generate_constr_type cons] @ [sf_instance; open_sf]
 
+let rec index_to_var = function
+  | 0 -> [%expr Top]
+  | n -> [%expr Pop [%e index_to_var (n - 1)]]
 
 let rec t1_to_ast = function
   | Lam m ->  [%expr Lam [%e t1_to_ast m]]
@@ -166,7 +169,7 @@ let rec t1_to_ast = function
 
 and t0_to_ast = function
   | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
-  | Var x -> assert false
+  | Var x -> [%expr Var [%e index_to_var x]]
 
 and sp_to_ast = function
   | Empty -> [%expr Empty]
@@ -176,6 +179,10 @@ and sp_to_ast = function
 (*   | _ -> assert false *)
   (* | Shift n -> [%expr Shift [%e int n]] *)
   (* | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])] *)
+
+let rec index_to_var_pat = function
+  | 0 -> [%pat? Top]
+  | n -> [%pat? Pop [%p index_to_var_pat (n - 1)]]
 
 let rec t1_to_pat_ast = function
   | Lam m ->  [%pat? Lam [%p t1_to_pat_ast m]]
@@ -189,7 +196,7 @@ let rec t1_to_pat_ast = function
 
 and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]
-  | Var x -> assert false
+  | Var x -> [%pat? Var [%p (index_to_var_pat x)]]
 
 and sp_to_pat_ast = function
   | Empty -> [%pat? Empty]
