@@ -104,26 +104,26 @@ module SyntacticFramework (S : sig type _ constructor end) = struct
 
     type (_,_) sub
       = Shift : ('g, 'd) shift-> ('g, 'd) sub
-      | Dot : ('g, 'd) sub * ('d, 't) tm0 -> (('g, 't)cons, 'd) sub
+      | Dot : ('g, 'd) sub * ('d, 't) tm1 -> (('g, 't)cons, 'd) sub
 
-    let rec lookup : type g d a. ((g, a base) var * (g, d) sub) -> (d, a base) tm0 =
+    let rec lookup : type g d a. ((g, a base) var * (g, d) sub) -> (d, a base) tm1 =
       function
       | Top, Dot (_, n) -> n
       | Pop v, Dot (s, _) -> lookup (v, s)
-      | v, Shift sh -> Var (shift_var sh v)
+      | v, Shift sh -> Tm0 (Var (shift_var sh v))
 
     let rec shift_sub : type g d e. (d, e) shift -> (g, d) sub -> (g , e) sub =
       fun sh -> function
 	     | Shift sh' -> Shift (compose_shift sh' sh)
-	     | Dot (s, n) -> Dot(shift_sub sh s, shift_tm0 sh n)
+	     | Dot (s, n) -> Dot(shift_sub sh s, shift_tm1 sh n)
 
     let wkn_sub : type g d a. (g, d) sub -> ((g, a base) cons, (d, a base) cons) sub =
-      fun s -> Dot(shift_sub (Suc Id) s, Var Top)
+      fun s -> Dot(shift_sub (Suc Id) s, Tm0 (Var Top))
 
-    let rec sub_tm0 : type g d t. (g, d) sub -> (g, t) tm0 -> (d, t) tm0 =
+    let rec sub_tm0 : type g d t. (g, d) sub -> (g, t) tm0 -> (d, t) tm1 =
       fun s -> function
 	    | Var v -> lookup (v, s)
-	    | C (c, sp) -> C (c, sub_sp s sp)
+	    | C (c, sp) -> Tm0 (C (c, sub_sp s sp))
 
     and sub_sp : type g d t t1. (g, d) sub -> (g, t, t1) sp -> (d, t, t1) sp =
       fun s -> function
@@ -133,8 +133,10 @@ module SyntacticFramework (S : sig type _ constructor end) = struct
     and sub_tm1 : type g d t. (g, d) sub -> (g, t) tm1 -> (d, t) tm1 =
       fun s -> function
 	    | Lam m -> Lam (sub_tm1 (wkn_sub s) m)
-	    | Tm0 n -> Tm0 (sub_tm0 s n)
+	    | Tm0 n -> sub_tm0 s n
 
+    let single_subst : type g d s t. ((g, s) cons, t) tm1 -> (g, s) tm1 -> (g, t) tm1 =
+      fun m n -> sub_tm1 (Dot (Shift Id, n)) m
   end
 
 (* Examples *)
@@ -145,4 +147,4 @@ type _ signature = Unit : (unit base) signature
 module SFU = SyntacticFramework(struct type 'a constructor = 'a signature end)
 
 
-let x : (nil, unit base) SFU.tm0 = SFU.C (Unit, Empty)
+let x : (nil, unit base) SFU.tm0 = SFU.C (Unit, SFU.Empty)

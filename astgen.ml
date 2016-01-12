@@ -160,7 +160,7 @@ let rec index_to_var = function
 let rec t1_to_ast = function
   | Lam m ->  [%expr Lam [%e t1_to_ast m]]
   | Tm0 r -> [%expr Tm0 [%e t0_to_ast r ]]
-  | AppS (m, s) ->  assert false (* [%expr hsub_nor [%e sub_to_ast s] [%e nor_to_ast m]] *)
+  | AppS (m, s) -> [%expr single_subst [%e t1_to_ast m] [%e sub_to_ast s]]
   | Meta u ->
      { pexp_desc = Pexp_ident (wrap (Longident.parse u))
      ; pexp_loc = Location.none
@@ -175,10 +175,9 @@ and sp_to_ast = function
   | Empty -> [%expr Empty]
   | Cons (m, sp) -> [%expr Cons ([%e t1_to_ast m], [%e sp_to_ast sp])]
 
-(* and sub_to_ast = function *)
-(*   | _ -> assert false *)
-  (* | Shift n -> [%expr Shift [%e int n]] *)
-  (* | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])] *)
+and sub_to_ast = function
+  | (m , 0) -> [%expr [%e t1_to_ast m]]
+  | _ -> raise (AST_gen_error "Only substitution for topmost var supported")
 
 let rec index_to_var_pat = function
   | 0 -> [%pat? Top]
