@@ -28,7 +28,7 @@ module SyntacticFramework (S : sig type _ constructor end) = struct
 
      and (_,_,_) sp
        = Empty : ('g, 't, 't) sp
-       | Cons : ('g, 't) tm1 * ('g, 't2, 't3) sp -> ('g, ('t1, 't2) arr, 't3) sp
+       | Cons : ('g, 't1) tm1 * ('g, 't2, 't3) sp -> ('g, ('t1, 't2) arr, 't3) sp
 
      and (_,_) tm1
        = Lam : (('g, 'a base) cons, 't) tm1 -> ('g, ('a base, 't) arr) tm1
