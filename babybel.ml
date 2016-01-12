@@ -65,9 +65,14 @@ let process_value_binding (binding : value_binding) : value_binding =
 			(extract_annotation (List.find (fun ({txt = t}, _) -> t = "type")
 						       binding.pvb_pat.ppat_attributes))
     in
+
+
+    (* MMM here it needs to have the type. in the begining of the expression *)
+
+
     let pat_no_ann = {binding.pvb_pat with ppat_attributes = []} in
     { binding with
-      pvb_expr = { pexp_desc = Pexp_constraint (binding.pvb_expr, Astgen.typ_ann_to_ast typ_ann)
+      pvb_expr = { pexp_desc = Pexp_constraint (binding.pvb_expr, Astgen.typ_ann_to_ast [] typ_ann)
 		 ; pexp_loc = Location.none
 		 ;  pexp_attributes = []
 		 }

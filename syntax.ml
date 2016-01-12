@@ -30,7 +30,7 @@ type ctx_term = ctx * term
 type typ_ann
   = BVars of var list * typ_ann
   | Arr of typ_ann * typ_ann
-  | TAny
+  | TAny of var option
   | CType of var
 
 (* examples *)

@@ -67,12 +67,10 @@ simple_term:
 (* | g = ctx VDASH m = term { g , m } *)
 
 typ_ann_no_eof:
-| ID* { TAny }
+| vs = ID* { if List.length vs > 1 then TAny None else TAny (Some (List.hd vs))}
 | LBOX t = ID RBOX { CType t }
-(* | vars = ID+ DOT t = typ_ann { BVars (vars, t) } *)
+| vars = ID+ DOT t = typ_ann { BVars (vars, t) }
 | t1 = typ_ann_no_eof ARR t2 = typ_ann_no_eof { Arr (t1, t2) }
-
-(* | ID* { TAny} *)
 
 typ_ann:
 | t = typ_ann_no_eof EOF { t}

@@ -32,21 +32,18 @@ let wrap c = { txt = c ; loc = Location.none }
 
 (* utility functions for dealing with ast *)
 
-let wrap_in_signature t  =
-  { ptyp_desc = Ptyp_constr ( wrap (Lident signature_typ_name), [t])
+let core_type t =
+  { ptyp_desc = t
   ; ptyp_loc = Location.none
   ; ptyp_attributes = []
   }
 
+
+let wrap_in_signature t  = core_type (Ptyp_constr ( wrap (Lident signature_typ_name), [t]))
+
 let build_base_typ s =
-  { ptyp_desc = Ptyp_constr ( wrap (Lident "base")
-			    , [{ ptyp_desc = Ptyp_constr (wrap (Lident s), [])
-			       ; ptyp_loc = Location.none
-			       ; ptyp_attributes = []
-			       }])
-  ; ptyp_loc = Location.none
-  ; ptyp_attributes = []
-  }
+  core_type (Ptyp_constr ( wrap (Lident "base")
+			 , [core_type (Ptyp_constr (wrap (Lident s), []))]))
 
 let decls_to_ast ds =
   (* generate an ocaml type for each kind in the signature *)
@@ -79,10 +76,7 @@ let decls_to_ast ds =
     (* having the constructors build the type *)
     let signature cons_trees =
        { pstr_desc = Pstr_type ([{ ptype_name = wrap signature_typ_name
-				 ; ptype_params = [{ ptyp_desc = Ptyp_any
-						   ; ptyp_loc = Location.none
-						   ; ptyp_attributes = []
-						   }, Invariant]
+				 ; ptype_params = [core_type Ptyp_any, Invariant]
 				 ; ptype_cstrs = []
 				 ; ptype_kind = Ptype_variant cons_trees
 				 ; ptype_private = Public
@@ -123,24 +117,13 @@ let decls_to_ast ds =
         [{pstr_desc =
             Pstr_type
               [{ ptype_name = wrap sf_signature_typ_name
-	       ; ptype_params = [({ ptyp_desc = Ptyp_var "a"
-				  ; ptyp_loc = Location.none
-				  ; ptyp_attributes = []
-				  }, Invariant)]
+	       ; ptype_params = [(core_type (Ptyp_var "a"), Invariant)]
 	       ; ptype_cstrs = []
 	       ; ptype_kind = Ptype_abstract
                ; ptype_private = Public
                ; ptype_manifest =
-                  Some
-                    { ptyp_desc =
-			Ptyp_constr ( wrap (Lident signature_typ_name)
-				    , [{ ptyp_desc = Ptyp_var "a"
-				       ; ptyp_loc = Location.none
-				       ; ptyp_attributes = []
-				       }])
-		    ; ptyp_loc = Location.none
-		    ; ptyp_attributes = []
-		    }
+                   Some (core_type (Ptyp_constr ( wrap (Lident signature_typ_name)
+						, [core_type (Ptyp_var "a")])))
 	       ; ptype_attributes = []
 	       ; ptype_loc = Location.none
 	       }]
@@ -189,8 +172,8 @@ and sp_to_ast = function
   | Empty -> [%expr Empty]
   | Cons (m, sp) -> [%expr Cons ([%e t1_to_ast m], [%e sp_to_ast sp])]
 
-and sub_to_ast = function
-  | _ -> assert false
+(* and sub_to_ast = function *)
+(*   | _ -> assert false *)
   (* | Shift n -> [%expr Shift [%e int n]] *)
   (* | Dot (s, m) -> [%expr Dot ([%e sub_to_ast s], [%e nor_to_ast m])] *)
 
@@ -208,11 +191,6 @@ and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]
   | Var x -> assert false
 
-(* and hd_to_pat_ast = function *)
-(*   | _ -> assert false *)
-  (* | Const c -> [%pat? Const [%p pstr c]] *)
-  (* | Var x -> [%pat? Var [%p pint x]] *)
-
 and sp_to_pat_ast = function
   | Empty -> [%pat? Empty]
   | Cons (m, sp) -> [%pat? Cons ([%p t1_to_pat_ast m], [%p sp_to_pat_ast sp])]
@@ -222,10 +200,12 @@ and sp_to_pat_ast = function
   (* | Shift n -> [%pat? Shift [%p pint n]] *)
   (* | Dot (s, m) -> [%pat? Dot ([%p sub_to_pat_ast s], [%p nor_to_pat_ast m])] *)
 
-let rec typ_ann_to_ast =
-  let foo s = build_base_typ s in
+let rec typ_ann_to_ast vs =
   function
-  | Syntax.BVars (vs, t) -> assert false
-  | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast t1] -> [%t typ_ann_to_ast t2]]
-  | Syntax.TAny -> [%type: _]
-  | Syntax.CType s -> [%type: ('a, [%t foo (typ_name s)]) tm1]
+  | Syntax.BVars (vs', t) -> core_type (Ptyp_poly(vs, typ_ann_to_ast (vs' @ vs) t))
+  | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast vs t1] -> [%t typ_ann_to_ast vs t2]]
+  (* MMM when I do the following line do it also inside contextual types CType *)
+  (* MMM also I need to add the type a b c. quantifier at the begining of the term (now that is in babebel.ml *)
+  (* | Syntax.TAny (Some v) when List.mem v vs -> core_type (Ptyp_constr (wrap (Lident v), [])) *)
+  | Syntax.TAny _ -> [%type: _]
+  | Syntax.CType s -> [%type: ('g, [%t build_base_typ (typ_name s)]) tm1]
