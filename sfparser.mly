@@ -7,25 +7,26 @@
 %token DOT
 %token COLON
 %token COMMA
+%token SEMICOLON
 %token TYPE
 %token VDASH
 
 %token <string> ID
 %token <string> MVAR
-%token <int> NUM
+(* %token <int> NUM *)
 %token LPAREN
 %token RPAREN
 %token LSQ
 %token RSQ
 %token LBOX
 %token RBOX
-%token BAR
+(* %token BAR *)
 %token EOF
 
 %right ARR
 
 %start <Usf.signature>  decls
-%start <Syntax.ctx_term> ctx_term
+%start <Syntax.ctx_term> ctx_term_expr
 %start <Syntax.term> term_expr
 %start <Syntax.typ_ann> typ_ann
 
@@ -59,18 +60,30 @@ term_expr:
 term:
 | m = simple_term+ { match m with |[m] -> m | m::ms -> App (m, ms) |_ -> assert false }
 | FN x = ID DOT m = term { Lam (x, m) }
-| m = term LSQ n = term BAR v = NUM RSQ { AppS (m, (n, v)) }
-| m = term LSQ n = term RSQ { AppS (m, (n, 0)) }
+| m = term LSQ s = sub RSQ { AppS (m, s) }
 
 simple_term:
 | LPAREN m = term RPAREN { m }
 | v = ID { Var v }
 | v = MVAR { MVar v }
 
+sub:
+| s = subs { List.rev s }
+(* | ID { [] } *)
+(* | s = separated_nonempty_list(COMMA, term) { List.rev s } *)
+
+
+subs:
+| t = term SEMICOLON s = subs { t :: s }
+| t = term { [t] }
+
+ctx_term_expr:
+| ct = ctx_term EOF {ct}
+
 ctx_term :
-| g = ctx VDASH m = term EOF { g , m }
-| VDASH m = term EOF { Empty , m }
-| m = term EOF { Empty , m }
+| g = ctx VDASH m = term { g , m }
+| VDASH m = term { Empty , m }
+| m = term { Empty , m }
 
 typ_ann_no_eof:
 | vs = ID* { if List.length vs > 1 then TAny None else TAny (Some (List.hd vs))}

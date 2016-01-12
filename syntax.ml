@@ -20,8 +20,7 @@ type term
   | Var of var
   | MVar of var
 
- and sub
-   = term * int
+ and sub = term list
 
 type ctx
   = Empty

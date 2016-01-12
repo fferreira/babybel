@@ -10,18 +10,20 @@ let regexp numeral = ['0' - '9']+
 let regexp lower = ['a'-'z']
 let regexp upper = ['A'-'Z']
 
-let regexp identifier = lower (lower | upper)*
+let regexp identifier = lower (lower | upper | numeral)*
 
 (* Managing source code positions *)
 
-let initial_pos file_name = { Lexing.pos_fname = file_name ;
-			      Lexing.pos_lnum = 1 ;
-			      Lexing.pos_bol = 0 ;
-			      Lexing.pos_cnum = 0 }
+let initial_pos file_name = { Lexing.pos_fname = file_name
+			    ; Lexing.pos_lnum = 1
+			    ; Lexing.pos_bol = 0
+			    ; Lexing.pos_cnum = 0
+			    }
 let add_line pos = { pos with
-		     Lexing.pos_lnum = pos.Lexing.pos_lnum +1 ;
-		     Lexing.pos_bol = pos.Lexing.pos_bol + pos.Lexing.pos_cnum ;
-		     Lexing.pos_cnum = 0}
+		     Lexing.pos_lnum = pos.Lexing.pos_lnum +1
+		   ; Lexing.pos_bol = pos.Lexing.pos_bol + pos.Lexing.pos_cnum
+		   ; Lexing.pos_cnum = 0
+		   }
 let add_word pos length = { pos with Lexing.pos_cnum = pos.Lexing.pos_cnum + length }
 
 let remove_first (s : string) : string =
@@ -43,14 +45,15 @@ let rec main_scanner pos = lexer
 | ']' -> add_word pos (Ulexing.lexeme_length lexbuf), RSQ
 | "{|" -> add_word pos (Ulexing.lexeme_length lexbuf), LBOX
 | "|}" -> add_word pos (Ulexing.lexeme_length lexbuf), RBOX
-| '/' -> add_word pos (Ulexing.lexeme_length lexbuf), BAR
+(* | '/' -> add_word pos (Ulexing.lexeme_length lexbuf), BAR *)
 | '.' -> add_word pos (Ulexing.lexeme_length lexbuf), DOT
 | ',' -> add_word pos (Ulexing.lexeme_length lexbuf), COMMA
+| ';' -> add_word pos (Ulexing.lexeme_length lexbuf), SEMICOLON
 | '\\' -> add_word pos (Ulexing.lexeme_length lexbuf), FN
 | "->" -> add_word pos (Ulexing.lexeme_length lexbuf), ARR
 | "type" -> add_word pos (Ulexing.lexeme_length lexbuf), TYPE
 | "|-" -> add_word pos (Ulexing.lexeme_length lexbuf), VDASH
-| numeral -> add_word pos (Ulexing.lexeme_length lexbuf), NUM (int_of_string (Ulexing.utf8_lexeme lexbuf))
+(* | numeral -> add_word pos (Ulexing.lexeme_length lexbuf), NUM (int_of_string (Ulexing.utf8_lexeme lexbuf)) *)
 | identifier -> add_word pos (Ulexing.lexeme_length lexbuf), ID (Ulexing.utf8_lexeme lexbuf)
 | '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), MVAR (remove_first (Ulexing.utf8_lexeme lexbuf))
 

@@ -34,8 +34,7 @@ and index_sp sg c = function
   | [] -> Empty
   | m::ms -> Cons (index_term sg c m, index_sp sg c ms)
 
-and index_sub sg c = function (m, 0) -> (index_term sg c m, 0)
-			    | (m, i) -> assert false
+and index_sub sg c s = List.map (index_term sg c) s
 
 let index (sg : signature) (g, m) : tm1 =
   let rec ctx_to_hat = function
