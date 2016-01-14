@@ -161,11 +161,7 @@ let rec t1_to_ast = function
   | Lam m ->  [%expr Lam [%e t1_to_ast m]]
   | Tm0 r -> [%expr Tm0 [%e t0_to_ast r ]]
   | AppS (m, s) -> [%expr sub_tm1 [%e sub_to_ast s] [%e t1_to_ast m]]
-  | Meta u ->
-     { pexp_desc = Pexp_ident (wrap (Longident.parse u))
-     ; pexp_loc = Location.none
-     ; pexp_attributes = []
-     }
+  | Meta u -> evar u
 
 and t0_to_ast = function
   | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
@@ -175,17 +171,10 @@ and sp_to_ast = function
   | Empty -> [%expr Empty]
   | Cons (m, sp) -> [%expr Cons ([%e t1_to_ast m], [%e sp_to_ast sp])]
 
-and sub_to_ast s =
-  let rec get_shift = function
-    | n -> [%expr Id]
-(*    | n -> [%expr Suc [%e get_shift (n - 1)]] *)
-  in
-  let rec sub_to_ast' sh = function
-  | [m] -> [%expr Dot (Shift [%e get_shift sh], [%e  t1_to_ast m])]
-  | m::ms -> [%expr Dot( [%e sub_to_ast' (sh+1) ms], [%e  t1_to_ast m])]
+and sub_to_ast =  function
+  | [m] -> [%expr Dot (Shift Id, [%e  t1_to_ast m])]
+  | m::ms -> [%expr Dot( [%e sub_to_ast ms], [%e  t1_to_ast m])]
   | _ -> raise (AST_gen_error "Only substitution for topmost var supported")
-  in
-  sub_to_ast' 0 s
 
 let rec index_to_var_pat = function
   | 0 -> [%pat? Top]
@@ -195,11 +184,7 @@ let rec t1_to_pat_ast = function
   | Lam m ->  [%pat? Lam [%p t1_to_pat_ast m]]
   | Tm0 r -> [%pat? Tm0 [%p t0_to_pat_ast r ]]
   | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
-  | Meta u ->
-     { ppat_desc = Ppat_var {txt = u ; loc = Location.none }
-     ; ppat_loc = Location.none
-     ; ppat_attributes = []
-     }
+  | Meta u -> pvar u
 
 and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]
@@ -208,11 +193,6 @@ and t0_to_pat_ast = function
 and sp_to_pat_ast = function
   | Empty -> [%pat? Empty]
   | Cons (m, sp) -> [%pat? Cons ([%p t1_to_pat_ast m], [%p sp_to_pat_ast sp])]
-
-(* and sub_to_pat_ast = function *)
-(*   | _ -> assert false *)
-  (* | Shift n -> [%pat? Shift [%p pint n]] *)
-  (* | Dot (s, m) -> [%pat? Dot ([%p sub_to_pat_ast s], [%p nor_to_pat_ast m])] *)
 
 let rec typ_ann_to_ast vs =
   function
