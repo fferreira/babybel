@@ -19,14 +19,6 @@ let sf_instance_name = "SFU"
 
 (* Generate ASTs *)
 
-(* let rec tp_to_ast = function *)
-(*   | TConst c -> [%expr TConst [%e str c]] *)
-(*   | Arr (s, t) -> [%expr Arr([%e tp_to_ast s], [%e tp_to_ast t])] *)
-
-(* let decl_to_ast = function *)
-(*   | c, Is_kind -> [%expr [%e str c], Is_kind] *)
-(*   | c, Is_type t -> let ta = tp_to_ast t in [%expr [%e str c], Is_type [%e ta]] *)
-
 (* wraps a value in a loc record *)
 let wrap c = { txt = c ; loc = Location.none }
 
@@ -41,9 +33,18 @@ let core_type t =
 
 let wrap_in_signature t  = core_type (Ptyp_constr ( wrap (Lident signature_typ_name), [t]))
 
-let build_base_typ s =
+(* build a type constructor (as opposed to a type variable) *)
+let build_base_typ_constr s =
   core_type (Ptyp_constr ( wrap (Lident "base")
 			 , [core_type (Ptyp_constr (wrap (Lident s), []))]))
+
+(* build a polymorhpich type variable *)
+let build_typ_var s =
+  core_type (Ptyp_var s)
+
+let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
+  | TConst n -> build_base_typ_constr (typ_name n)
+  | Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
 
 let decls_to_ast ds =
   (* generate an ocaml type for each kind in the signature *)
@@ -89,10 +90,6 @@ let decls_to_ast ds =
     in
     (* generate a constructor available for the signature *)
     let generate_constructor =
-      let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
-	| TConst n -> build_base_typ (typ_name n)
-	| Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
-      in
       function (name, Is_type t) ->
 	       { pcd_name = wrap (con_name name)
 	       ; pcd_args = []
@@ -195,11 +192,16 @@ and sp_to_pat_ast = function
   | Cons (m, sp) -> [%pat? Cons ([%p t1_to_pat_ast m], [%p sp_to_pat_ast sp])]
 
 let rec typ_ann_to_ast vs =
+  let rec ctx_to_typ_ann = function
+    | Syntax.Empty -> [%type: nil]
+    | Syntax.CtxVar v -> build_typ_var v (* MMM WRONG! this ignores v *)
+    | Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
+  in
   function
-  | Syntax.BVars (vs', t) -> core_type (Ptyp_poly(vs, typ_ann_to_ast (vs' @ vs) t))
+  (* | Syntax.BVars (vs', t) -> core_type (Ptyp_poly(vs, typ_ann_to_ast (vs' @ vs) t)) *)
   | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast vs t1] -> [%t typ_ann_to_ast vs t2]]
   (* MMM when I do the following line do it also inside contextual types CType *)
   (* MMM also I need to add the type a b c. quantifier at the begining of the term (now that is in babebel.ml *)
   (* | Syntax.TAny (Some v) when List.mem v vs -> core_type (Ptyp_constr (wrap (Lident v), [])) *)
   | Syntax.TAny _ -> [%type: _]
-  | Syntax.CType s -> [%type: ('g, [%t build_base_typ (typ_name s)]) tm1]
+  | Syntax.CType (g, s) -> [%type: ([%t ctx_to_typ_ann g], [%t build_base_typ_constr (typ_name s)]) tm1]

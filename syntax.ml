@@ -27,14 +27,17 @@ type ctx
   | CtxVar of var
   | Cons of ctx * var * Usf.tp
 
-
 type ctx_term = ctx * term
 
-type typ_ann
-  = BVars of var list * typ_ann
-  | Arr of typ_ann * typ_ann
+(* A type annotation with some free variables *)
+type typ_ann_body
+  = Arr of typ_ann_body * typ_ann_body
   | TAny of var option
-  | CType of var
+  | CType of ctx * var
+
+(* type annotation with a list of quatified
+   variables on the outside *)
+type typ_ann = var list * typ_ann_body
 
 (* examples *)
 

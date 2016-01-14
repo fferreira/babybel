@@ -17,7 +17,7 @@ let t1  = {t| |- s z |t}
 let t2  = {t| z |t}
 let t3 = {t| ., x : tm, y : tm |- x |t}
 
-let is_top [@type "{|tm|} -> bool"] = function
+let is_top [@type "d. {| d , x : tm |- tm |} -> bool"] = function
   | {p| g, x : tm |- x |p} -> true
   |  _ -> false
 
