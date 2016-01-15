@@ -9,6 +9,9 @@ lam : (tm -> tm) -> tm.
 
 (* open terms *)
 
+(* this should be: g. {|g , x : tm |- tm|} -> int
+   More careful generation of type annotations is needed
+*)
 
 let count [@type "{|., x : tm |- tm|} -> int"] = function
   (* | {p| g, x : tm |- app 'm 'n |p} -> count m + count n *)
