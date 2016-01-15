@@ -49,6 +49,9 @@ let load_session unit : unit =
 
 (* The rewriter *)
 
+let expr = Astgen.expression
+let typ = Astgen.core_type
+
 let process_value_binding (binding : value_binding) : value_binding =
   let extract_annotation (_, payload) =
     match payload with
@@ -69,31 +72,12 @@ let process_value_binding (binding : value_binding) : value_binding =
     let pat_no_ann = {binding.pvb_pat with ppat_attributes = []} in
     let tp = Astgen.typ_ann_to_ast vs typ_ann in
     let abstract_type_var e tv =
-      print_string "######################################################################";
-      { pexp_desc =
-          Pexp_newtype (tv,
-			{ pexp_desc =
-			    Pexp_constraint ({ pexp_desc = Pexp_constant (Const_int 0)
-					     ; pexp_loc = Location.none
-					     ; pexp_attributes = []
-					     },
-					     { ptyp_desc = Ptyp_var "a" (* MMM ??? *)
-					     ; ptyp_loc = Location.none
-					     ; ptyp_attributes = []
-					     })
-			; pexp_loc = Location.none
-			; pexp_attributes = []
-			})
-      ; pexp_loc = Location.none
-      ; pexp_attributes = []
-      }
+      expr (Pexp_newtype (tv, e))
     in
-    let expr = List.fold_left abstract_type_var binding.pvb_expr vs in
+    let inner_expr = expr(Pexp_constraint (binding.pvb_expr, tp)) in
+    let body = List.fold_left abstract_type_var inner_expr vs in
     { binding with
-      pvb_expr = { pexp_desc = Pexp_constraint (expr, tp)
-		 ; pexp_loc = Location.none
-		 ;  pexp_attributes = []
-		 }
+      pvb_expr = body
     ; pvb_pat = pat_no_ann (* MMM removes all other the attributes also *)
     }
   with

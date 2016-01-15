@@ -24,6 +24,12 @@ let wrap c = { txt = c ; loc = Location.none }
 
 (* utility functions for dealing with ast *)
 
+let expression e =
+  { pexp_desc = e
+  ; pexp_loc = Location.none
+  ; pexp_attributes = []
+  }
+
 let core_type t =
   { ptyp_desc = t
   ; ptyp_loc = Location.none
@@ -41,6 +47,8 @@ let build_base_typ_constr s =
 (* build a polymorhpich type variable *)
 let build_typ_var s =
   core_type (Ptyp_var s)
+let build_typ_const s =
+  core_type (Ptyp_constr (wrap (Lident s), []))
 
 let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
   | TConst n -> build_base_typ_constr (typ_name n)
@@ -194,7 +202,10 @@ and sp_to_pat_ast = function
 let rec typ_ann_to_ast vs =
   let rec ctx_to_typ_ann = function
     | Syntax.Empty -> [%type: nil]
-    | Syntax.CtxVar v -> build_typ_var v (* MMM WRONG! this ignores v *)
+    (* if the context var is bound in vs then it should be a type constructor *)
+    | Syntax.CtxVar v when List.mem v vs ->  build_typ_const v
+    (* otherwise it is a polymorphic variable *)
+    | Syntax.CtxVar v -> build_typ_var v
     | Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
   in
   function
