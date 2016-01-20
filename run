@@ -1,0 +1,1 @@
+rlwrap ocaml -init bbinit -I ./_build -ppx ./babybel.native
