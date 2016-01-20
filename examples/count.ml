@@ -9,11 +9,11 @@ lam : (tm -> tm) -> tm.
 
 (* open terms *)
 
-(* this should be: g. {|g , x : tm |- tm|} -> int
-   More careful generation of type annotations is needed
-*)
+(* More careful generation of type annotations is needed as this does
+   not work for applications
+ *)
 
-let count [@type "{|., x : tm |- tm|} -> int"] = function
+let count [@type "g. {|g, x : tm |- tm|} -> int"] = function
   (* | {p| g, x : tm |- app 'm 'n |p} -> count m + count n *)
   | {p| g, x : tm |- x |p} -> 1
   | _ -> 0

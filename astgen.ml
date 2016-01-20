@@ -39,10 +39,9 @@ let core_type t =
 
 let wrap_in_signature t  = core_type (Ptyp_constr ( wrap (Lident signature_typ_name), [t]))
 
-(* build a type constructor (as opposed to a type variable) *)
-let build_base_typ_constr s =
+let wrap_type_in_base t =
   core_type (Ptyp_constr ( wrap (Lident "base")
-			 , [core_type (Ptyp_constr (wrap (Lident s), []))]))
+			 , [t]))
 
 (* build a polymorhpich type variable *)
 let build_typ_var s =
@@ -50,8 +49,11 @@ let build_typ_var s =
 let build_typ_const s =
   core_type (Ptyp_constr (wrap (Lident s), []))
 
+(* build a base type with a constructor *)
+let build_base_typ_constr s f = wrap_type_in_base (f s)
+
 let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
-  | TConst n -> build_base_typ_constr (typ_name n)
+  | TConst n -> build_base_typ_constr (typ_name n) build_typ_const
   | Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
 
 let decls_to_ast ds =
@@ -209,10 +211,9 @@ let rec typ_ann_to_ast vs =
     | Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
   in
   function
-  (* | Syntax.BVars (vs', t) -> core_type (Ptyp_poly(vs, typ_ann_to_ast (vs' @ vs) t)) *)
   | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast vs t1] -> [%t typ_ann_to_ast vs t2]]
   (* MMM when I do the following line do it also inside contextual types CType *)
   (* MMM also I need to add the type a b c. quantifier at the begining of the term (now that is in babebel.ml *)
   (* | Syntax.TAny (Some v) when List.mem v vs -> core_type (Ptyp_constr (wrap (Lident v), [])) *)
   | Syntax.TAny _ -> [%type: _]
-  | Syntax.CType (g, s) -> [%type: ([%t ctx_to_typ_ann g], [%t build_base_typ_constr (typ_name s)]) tm1]
+  | Syntax.CType (g, s) -> [%type: ([%t ctx_to_typ_ann g], [%t build_base_typ_constr (typ_name s) build_typ_const]) tm1]

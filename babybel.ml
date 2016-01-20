@@ -53,6 +53,11 @@ let expr = Astgen.expression
 let typ = Astgen.core_type
 
 let process_value_binding (binding : value_binding) : value_binding =
+  let remove_pat_type_attribute p =
+    { p with
+      ppat_attributes = List.filter (fun ({txt = t}, _) -> not(t = "type")) p.ppat_attributes
+    }
+  in
   let extract_annotation (_, payload) =
     match payload with
     | PStr [str_item] -> (match str_item.pstr_desc with
@@ -69,7 +74,26 @@ let process_value_binding (binding : value_binding) : value_binding =
 							   binding.pvb_pat.ppat_attributes))
     in
 
-    let pat_no_ann = {binding.pvb_pat with ppat_attributes = []} in
+    let poly_quantify vs t =
+      if List.length vs > 0 then
+	typ (Ptyp_poly (vs, t))
+      else
+	t
+    in
+
+    (* removes the annotation and adds the type constraint *)
+    let pat_no_att = remove_pat_type_attribute binding.pvb_pat in
+    let pat_with_constraint = { pat_no_att with
+				ppat_desc = Ppat_constraint (pat_no_att
+		     					    , poly_quantify
+		     						vs
+			      (* HACK ALERT: in the call to typ_ann_to_ast takes the [] list
+                                 instead of vs because that way the variables become variables
+                                 instead of type constructors that will only be bound in the
+                                 body of the function *)
+		     						(Astgen.typ_ann_to_ast [] typ_ann))
+			      }
+    in
     let tp = Astgen.typ_ann_to_ast vs typ_ann in
     let abstract_type_var e tv =
       expr (Pexp_newtype (tv, e))
@@ -78,7 +102,7 @@ let process_value_binding (binding : value_binding) : value_binding =
     let body = List.fold_left abstract_type_var inner_expr vs in
     { binding with
       pvb_expr = body
-    ; pvb_pat = pat_no_ann (* MMM removes all other the attributes also *)
+    ; pvb_pat = pat_with_constraint
     }
   with
     Not_found -> binding
