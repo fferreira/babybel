@@ -10,10 +10,11 @@
 %token SEMICOLON
 %token TYPE
 %token VDASH
+%token SHIFT
 
 %token <string> ID
 %token <string> MVAR
-(* %token <int> NUM *)
+%token <int> NUM
 %token LPAREN
 %token RPAREN
 %token LSQ
@@ -67,15 +68,22 @@ simple_term:
 | v = ID { Var v }
 | v = MVAR { MVar v }
 
+
+shift:
+| SHIFT n = NUM SEMICOLON { n }
+
 sub:
-| s = subs { List.rev s }
+| n = shift? s = separated_list(SEMICOLON, term) { (match n with None -> 0 | Some n -> n), List.rev s }
+
+(* | s = subs { assert false } *)
 (* | ID { [] } *)
 (* | s = separated_nonempty_list(COMMA, term) { List.rev s } *)
 
 
-subs:
-| t = term SEMICOLON s = subs { t :: s }
-| t = term { [t] }
+(* subs: *)
+(* | t = term SEMICOLON s = subs { Dot (t, s) } *)
+(* | t = term { Dot (t, Shift 0) } *)
+(* | SHIFT n=NUM { Shift n } *)
 
 ctx_term_expr:
 | ct = ctx_term EOF {ct}

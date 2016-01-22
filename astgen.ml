@@ -178,9 +178,14 @@ and sp_to_ast = function
   | Empty -> [%expr Empty]
   | Cons (m, sp) -> [%expr Cons ([%e t1_to_ast m], [%e sp_to_ast sp])]
 
-and sub_to_ast =  function
-  | [m] -> [%expr Dot (Shift Id, [%e  t1_to_ast m])]
-  | m::ms -> [%expr Dot( [%e sub_to_ast ms], [%e  t1_to_ast m])]
+and sub_to_ast =
+  let rec shift = function
+    | 0 -> [%expr Id ]
+    | n -> [%expr Suc [%e shift(n-1)]]
+  in
+  function
+  | sh, [m] -> [%expr Dot (Shift [%e shift sh], [%e  t1_to_ast m])]
+  | sh, m::ms -> [%expr Dot( [%e sub_to_ast (sh, ms)], [%e  t1_to_ast m])]
   | _ -> raise (AST_gen_error "Only substitution for topmost var supported")
 
 let rec index_to_var_pat = function

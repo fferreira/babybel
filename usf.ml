@@ -27,4 +27,4 @@ type tm0
    | Meta of name
    | AppS of tm1 * sub
 
- and sub = tm1 list
+ and sub = int * tm1 list

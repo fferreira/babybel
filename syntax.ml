@@ -20,7 +20,11 @@ type term
   | Var of var
   | MVar of var
 
- and sub = term list
+ (* a shift and a list of terms to substitute for variables *)
+ and sub = int * term list
+ (* and sub *)
+ (*   = Shift of int *)
+ (*   | Dot of term * sub *)
 
 type ctx
   = Empty

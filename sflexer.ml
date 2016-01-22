@@ -5,12 +5,13 @@ exception Error of string
 let regexp nl  = ('\n' | '\r' | "\r\n" | "\n\r")
 let regexp tab = ['\t''\x0b']
 let regexp wsp = [' ''\t']
-let regexp numeral = ['0' - '9']+
+let regexp digit = ['0' - '9']+
+let regexp numeral = digit+
 
 let regexp lower = ['a'-'z']
 let regexp upper = ['A'-'Z']
 
-let regexp identifier = lower (lower | upper | numeral)*
+let regexp identifier = lower (lower | upper | digit)*
 
 (* Managing source code positions *)
 
@@ -49,11 +50,12 @@ let rec main_scanner pos = lexer
 | '.' -> add_word pos (Ulexing.lexeme_length lexbuf), DOT
 | ',' -> add_word pos (Ulexing.lexeme_length lexbuf), COMMA
 | ';' -> add_word pos (Ulexing.lexeme_length lexbuf), SEMICOLON
+| '^' -> add_word pos (Ulexing.lexeme_length lexbuf), SHIFT
 | '\\' -> add_word pos (Ulexing.lexeme_length lexbuf), FN
 | "->" -> add_word pos (Ulexing.lexeme_length lexbuf), ARR
 | "type" -> add_word pos (Ulexing.lexeme_length lexbuf), TYPE
 | "|-" -> add_word pos (Ulexing.lexeme_length lexbuf), VDASH
-(* | numeral -> add_word pos (Ulexing.lexeme_length lexbuf), NUM (int_of_string (Ulexing.utf8_lexeme lexbuf)) *)
+| numeral -> add_word pos (Ulexing.lexeme_length lexbuf), NUM (int_of_string (Ulexing.utf8_lexeme lexbuf))
 | identifier -> add_word pos (Ulexing.lexeme_length lexbuf), ID (Ulexing.utf8_lexeme lexbuf)
 | '\'' identifier -> add_word pos (Ulexing.lexeme_length lexbuf), MVAR (remove_first (Ulexing.utf8_lexeme lexbuf))
 
