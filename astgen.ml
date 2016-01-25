@@ -169,6 +169,7 @@ let rec t1_to_ast = function
   | Tm0 r -> [%expr Tm0 [%e t0_to_ast r ]]
   | AppS (m, s) -> [%expr sub_tm1 [%e sub_to_ast s] [%e t1_to_ast m]]
   | Meta u -> evar u
+  | Par u -> [%expr Tm0(Var [%e evar u])]
 
 and t0_to_ast = function
   | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
@@ -197,6 +198,7 @@ let rec t1_to_pat_ast = function
   | Tm0 r -> [%pat? Tm0 [%p t0_to_pat_ast r ]]
   | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
   | Meta u -> pvar u
+  | Par u -> [%pat? Tm0(Var [%p pvar u])]
 
 and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]

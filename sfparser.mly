@@ -14,6 +14,7 @@
 
 %token <string> ID
 %token <string> MVAR
+%token <string> PVAR
 %token <int> NUM
 %token LPAREN
 %token RPAREN
@@ -67,6 +68,7 @@ simple_term:
 | LPAREN m = term RPAREN { m }
 | v = ID { Var v }
 | v = MVAR { MVar v }
+| v = PVAR { PVar v }
 
 
 shift:

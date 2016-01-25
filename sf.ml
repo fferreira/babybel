@@ -1,6 +1,4 @@
-(* The intrinsically typed second order syntactical framework (Now with more functors!) *)
-
-let a _ = assert false
+(* The intrinsically typed second order syntactical framework *)
 
 type _ base = B
 type (_,_) arr = A
