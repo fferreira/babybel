@@ -30,7 +30,7 @@
 %start <Usf.signature>  decls
 %start <Syntax.ctx_term> ctx_term_expr
 %start <Syntax.term> term_expr
-%start <Syntax.typ_ann> typ_ann
+%start <Syntax.typ_ann_body> typ_ann
 
 %%
 
@@ -97,14 +97,8 @@ ctx_term :
 
 
 typ_ann_no_eof:
-| vs = ID* { if List.length vs > 1 then TAny None else TAny (Some (List.hd vs))}
 | LBOX g = ctx VDASH t = ID RBOX { CType (g, t) }
 | LBOX t = ID RBOX { CType (Empty, t) }
-| t1 = typ_ann_no_eof ARR t2 = typ_ann_no_eof { Arr (t1, t2) }
-
-typ_ann_quant:
-| vars = ID+ DOT t = typ_ann_no_eof { (vars, t) }
-| t = typ_ann_no_eof { ([], t) }
 
 typ_ann:
-| t = typ_ann_quant EOF { t}
+| t = typ_ann_no_eof EOF { t}

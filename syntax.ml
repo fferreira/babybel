@@ -1,4 +1,5 @@
 open Usf
+open Parsetree
 
 (* type constant = string *)
 
@@ -37,8 +38,10 @@ type ctx_term = ctx * term
 (* A type annotation with some free variables *)
 type typ_ann_body
   = Arr of typ_ann_body * typ_ann_body
-  | TAny of var option
+  (* | TAny of var option *)
   | CType of ctx * var
+	(* the first one has type vars and the second one has type constructors *)
+	| CoreType of Parsetree.core_type * Parsetree.core_type
 
 (* type annotation with a list of quatified
    variables on the outside *)

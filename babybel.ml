@@ -47,6 +47,48 @@ let load_session unit : unit =
     close_in_noerr f
   with _ -> print_string "No session loaded\n" ; ()
 
+(* parsing type annotations *)
+
+let parse_typ_ann s =
+	(* hack alert *)
+	let starts_with pre s =
+		try
+			String.sub s 0 (String.length pre) = pre
+		with
+			Invalid_argument _ -> false
+	in
+	let replace_typ_constr t =
+		let rec m = { default_mapper with
+							typ = (fun mapper t ->
+										 match t with
+										 | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
+												{t with
+													ptyp_desc = Ptyp_var n
+												}
+										 | other -> default_mapper.typ mapper other
+										)
+						}
+		in
+		m.typ m t
+	in
+	let parse s =
+		if starts_with "{" (String.trim s)
+		then parse Sfparser.typ_ann s
+		else
+			begin
+				let t = Parse.core_type (Lexing.from_string s) in
+				Syntax.CoreType (replace_typ_constr t, t)
+			end
+	in
+	let ss = Str.split (Str.regexp "->") s in
+	let tr = List.map parse ss in
+	let rec build_type = function
+		| [t] -> t
+		| t::ts -> Syntax.Arr(t, build_type ts)
+		| [] -> raise (Some_error "build_type hast to get one type (this cannot happen)")
+	in
+	build_type tr
+
 (* The rewriter *)
 
 let expr = Astgen.expression
@@ -69,10 +111,18 @@ let process_value_binding (binding : value_binding) : value_binding =
 
   in
   try
-    let vs, typ_ann = parse Sfparser.typ_ann
-			    (extract_annotation (List.find (fun ({txt = t}, _) -> t = "type")
-							   binding.pvb_pat.ppat_attributes))
-    in
+		let typ_ann_str = (extract_annotation (List.find (fun ({txt = t}, _) -> t = "type")
+																										 binding.pvb_pat.ppat_attributes))
+		in
+		let split_on_first_dot s =
+			try
+				let n = String.index s '.' in
+				(Str.string_before s n, Str.string_after s (n +1))
+			with
+				Not_found -> ("", s)
+		in
+		let a, b = split_on_first_dot typ_ann_str in
+    let vs, typ_ann = Str.split (Str.regexp " ") a, parse_typ_ann b in
 
     let poly_quantify vs t =
       if List.length vs > 0 then
@@ -91,10 +141,10 @@ let process_value_binding (binding : value_binding) : value_binding =
                                  instead of vs because that way the variables become variables
                                  instead of type constructors that will only be bound in the
                                  body of the function *)
-		     						(Astgen.typ_ann_to_ast [] typ_ann))
+		     						(Astgen.typ_ann_to_ast Astgen.Variables [] typ_ann))
 			      }
     in
-    let tp = Astgen.typ_ann_to_ast vs typ_ann in
+    let tp = Astgen.typ_ann_to_ast Astgen.Constructors vs typ_ann in
     let abstract_type_var e tv =
       expr (Pexp_newtype (tv, e))
     in
