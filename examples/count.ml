@@ -19,7 +19,8 @@ let rec count [@type "g. {|g, x : tm |- tm|} -> int"] =
   | {p| g, x : tm |- app 'm 'n |p} -> count m + count n
   | {p| g, x : tm |- lam (\y. 'm) |p} -> count {t| g,x:tm, y:tm |- 'm [^2; y ; x] |t}
   | {p| g, x : tm |- x |p} -> 1
-  | _ -> 0 (* this cases matches variables that are not the top one *)
+  | {p| g |- #x |p} -> 0
+  (* | _ -> 0 *) (* this cases matches variables that are not the top one *)
 
 let t0 = {t| x : tm |- x |t}
 let t1 = {t| x : tm |- c |t}
