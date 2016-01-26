@@ -25,7 +25,7 @@ let rec copy [@type "g . {|g |- tm|} -> {|g |- tm|}"] =
   | {p| app 'm 'n |p} ->
      let mc = copy m in
      let nc = copy n in
-     {p| app 'mc 'nc |p}
+     {t| app 'mc 'nc |t}
   | {p| lam (\x. 'm)  |p} ->
      let mc = copy m in
      {t| lam (\x. 'mc)  |t}
