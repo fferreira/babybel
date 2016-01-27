@@ -21,9 +21,7 @@ type (_, _) rel =
 
 
 let rec copy [@type "g d . {|g |- tm|} -> (g, d) rel -> {|d |- tmc|}"] =
-  fun x -> fun rel ->
-
-					 match x with
+  fun x -> fun rel -> match x with
   (* | {p| #x |p} -> {t| #x |t} *)
   | {p| c |p} -> {t| cc |t}
   | {p| app 'm 'n |p} ->
