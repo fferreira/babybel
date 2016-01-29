@@ -11,10 +11,10 @@
 %token TYPE
 %token VDASH
 %token SHIFT
+%token APOSTROPHE
+%token SHARP
 
 %token <string> ID
-%token <string> MVAR
-%token <string> PVAR
 %token <int> NUM
 %token LPAREN
 %token RPAREN
@@ -22,7 +22,6 @@
 %token RSQ
 %token LBOX
 %token RBOX
-(* %token BAR *)
 %token EOF
 
 %right ARR
@@ -67,9 +66,8 @@ term:
 simple_term:
 | LPAREN m = term RPAREN { m }
 | v = ID { Var v }
-| v = MVAR { MVar v }
-| v = PVAR { PVar v }
-
+| APOSTROPHE v = ID { MVar v }
+| sh = SHARP+ v = ID { PVar (v, List.length sh) }
 
 shift:
 | SHIFT n = NUM SEMICOLON { n }

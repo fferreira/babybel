@@ -27,7 +27,7 @@ let rec index_term (sg : signature) (c : hat_ctx) (m : Syntax.term) : tm1 =
   | Syntax.Var x when is_var x c -> Tm0 (Var (lookup_var x c))
   | Syntax.Var x when is_con x c sg -> Tm0 (C (x, Empty))
   | Syntax.MVar x -> Meta x
-  | Syntax.PVar x -> Par x
+  | Syntax.PVar (x, n) -> Par (x, n)
   | Syntax.AppS (m, s') -> AppS(index_term sg c m, index_sub sg c s')
   | _ -> raise (Indexing_failure "non-normal 2nd order term while indexing")
 

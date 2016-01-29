@@ -169,7 +169,8 @@ let rec t1_to_ast = function
   | Tm0 r -> [%expr Tm0 [%e t0_to_ast r ]]
   | AppS (m, s) -> [%expr sub_tm1 [%e sub_to_ast s] [%e t1_to_ast m]]
   | Meta u -> evar u
-  | Par u -> [%expr Tm0(Var [%e evar u])]
+  | Par (u, 1) -> [%expr Tm0(Var [%e evar u])]
+  | Par (_, n) -> raise (AST_gen_error "unimplemented par n")
 
 and t0_to_ast = function
   | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
@@ -185,20 +186,26 @@ and sub_to_ast =
     | n -> [%expr Suc [%e shift(n-1)]]
   in
   function
+  | sh, [] -> [%expr Shift [%e shift sh]]
   | sh, [m] -> [%expr Dot (Shift [%e shift sh], [%e  t1_to_ast m])]
   | sh, m::ms -> [%expr Dot( [%e sub_to_ast (sh, ms)], [%e  t1_to_ast m])]
-  | _ -> raise (AST_gen_error "Only substitution for topmost var supported")
+  | _ -> raise (AST_gen_error "Unsupported substitution")
 
 let rec index_to_var_pat = function
   | 0 -> [%pat? Top]
   | n -> [%pat? Pop [%p index_to_var_pat (n - 1)]]
+
+let rec gen_pvar_pop_pat v = function
+  | 0 -> raise (AST_gen_error "Violation, this is not the integer you are looking for (0)")
+  | 1 -> v
+  | n ->  [%pat? Pop [%p gen_pvar_pop_pat v (n-1)]]
 
 let rec t1_to_pat_ast = function
   | Lam m ->  [%pat? Lam [%p t1_to_pat_ast m]]
   | Tm0 r -> [%pat? Tm0 [%p t0_to_pat_ast r ]]
   | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
   | Meta u -> pvar u
-  | Par u -> [%pat? Tm0(Var [%p pvar u])]
+  | Par (u, n) -> [%pat? Tm0(Var [%p gen_pvar_pop_pat (pvar u) n])]
 
 and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]

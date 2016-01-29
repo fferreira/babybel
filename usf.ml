@@ -25,7 +25,7 @@ type tm0
    = Lam of tm1
    | Tm0 of tm0
    | Meta of name
-   | Par of name
+   | Par of name * int
    | AppS of tm1 * sub
 
  and sub = int * tm1 list

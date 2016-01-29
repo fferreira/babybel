@@ -20,7 +20,7 @@ type term
   | AppS of term * sub
   | Var of var
   | MVar of var
-  | PVar of var
+  | PVar of var * int
 
  (* a shift and a list of terms to substitute for variables *)
  and sub = int * term list
