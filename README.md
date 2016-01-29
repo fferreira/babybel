@@ -12,6 +12,5 @@ This is an experimental implementation of a syntax extension to Ocaml that adds 
 
 After building with ```make```:
 
-1. ```rlwrap ocaml -ppx ./babybel.native -I ./_build/```
-2. ```#load "sf.cmo";;```
-3. ```#use "example/nat.ml";;```
+1. ```./run```
+2. ```#use "example/nat.ml";;```
