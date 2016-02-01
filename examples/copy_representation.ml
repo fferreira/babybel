@@ -14,21 +14,21 @@ lamc : (tmc -> tmc) -> tmc.
 
 |def}]
 
-type (_, _) rel =
-  | Empty : (nil, nil) rel
+type (_, _) rel
+  = Empty : (nil, nil) rel
   | Both : ('g, 'd) rel -> (('g, tp_tm base) cons, ('d, tp_tmc base) cons) rel
 
 
 let rec lookup [@type "g d . {|g |- tm|} -> (g, d) rel -> {|d |- tmc|}"] =
-  fun t r -> match r with
-	     | Empty -> assert false (* cannot lookup in an empty directory *)
-	     | Both r' ->
-		begin match t with
-		      | {p| g,x :tm |- x |p} -> {t| d,x:tmc |- x |t}
-		      | {p| g,x :tm |- ##v |p} ->
-			 let v1 =  lookup {t| #v |t} r'
-			 in {t|g, x:tmc |- 'v1 [^1 ;] |t}
-		end
+  fun t -> function
+	| Empty -> assert false (* cannot lookup in an empty context *)
+	| Both r' ->
+	   begin match t with
+		 | {p| g,x :tm |- x |p} -> {t| d,x:tmc |- x |t}
+		 | {p| g,x :tm |- ##v |p} ->
+		    let v1 =  lookup {t| #v |t} r'
+		    in {t|g, x:tmc |- 'v1 [^1 ;] |t}
+	   end
 
 let rec copy [@type "g d . {|g |- tm|} -> (g, d) rel -> {|d |- tmc|}"] =
   fun x -> fun rel -> match x with
