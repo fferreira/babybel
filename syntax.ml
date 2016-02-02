@@ -1,17 +1,6 @@
 open Usf
 open Parsetree
 
-(* type constant = string *)
-
-(* type tp *)
-(*   = TConst of constant *)
-(*   | Arr of tp * tp *)
-
-
-(* type decl = string * type_or_kind *)
-
-(* type decls = decl list *)
-
 type var = string
 
 type term
@@ -24,9 +13,6 @@ type term
 
  (* a shift and a list of terms to substitute for variables *)
  and sub = int * term list
- (* and sub *)
- (*   = Shift of int *)
- (*   | Dot of term * sub *)
 
 type ctx
   = Empty
@@ -38,7 +24,6 @@ type ctx_term = ctx * term
 (* A type annotation with some free variables *)
 type typ_ann_body
   = Arr of typ_ann_body * typ_ann_body
-  (* | TAny of var option *)
   | CType of ctx * var
 	(* the first one has type vars and the second one has type constructors *)
 	| CoreType of Parsetree.core_type * Parsetree.core_type
