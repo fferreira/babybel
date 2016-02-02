@@ -189,7 +189,6 @@ and sub_to_ast =
   | sh, [] -> [%expr Shift [%e shift sh]]
   | sh, [m] -> [%expr Dot (Shift [%e shift sh], [%e  t1_to_ast m])]
   | sh, m::ms -> [%expr Dot( [%e sub_to_ast (sh, ms)], [%e  t1_to_ast m])]
-  | _ -> raise (AST_gen_error "Unsupported substitution")
 
 let rec index_to_var_pat = function
   | 0 -> [%pat? Top]
@@ -226,7 +225,8 @@ let rec typ_ann_to_ast flag vs =
     | Syntax.CtxVar v when List.mem v vs ->  build_typ_const v
     (* otherwise it is a polymorphic variable *)
     | Syntax.CtxVar v -> build_typ_var v
-    | Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
+    | Syntax.Cons (g, x, Some t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
+    | Syntax.Cons (_, _, None) -> raise (AST_gen_error "missing type annotation on context")
   in
   function
   | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast flag vs t1] -> [%t typ_ann_to_ast flag vs t2]]

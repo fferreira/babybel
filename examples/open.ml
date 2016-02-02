@@ -12,13 +12,13 @@ fix : (tm -> tm) -> tm.
 
 (* open terms *)
 
-let t0 = {t| x : tm |- x |t}
+let t0 = {t| x |- x |t}
 let t1  = {t| |- s z |t}
 let t2  = {t| z |t}
-let t3 = {t| ., x : tm, y : tm |- x |t}
+let t3 = {t| ., x, y |- x |t}
 
 let is_top [@type "d. {| d , x : tm |- tm |} -> bool"] = function
-  | {p| g, x : tm |- x |p} -> true
+  | {p| g, x |- x |p} -> true
   |  _ -> false
 
 let tt0 = is_top t0

@@ -31,7 +31,7 @@ type term
 type ctx
   = Empty
   | CtxVar of var
-  | Cons of ctx * var * Usf.tp
+  | Cons of ctx * var * Usf.tp option
 
 type ctx_term = ctx * term
 
