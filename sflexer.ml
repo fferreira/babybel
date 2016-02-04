@@ -47,8 +47,8 @@ let rec main_scanner pos = lexer
 | ')' -> add_word pos (Ulexing.lexeme_length lexbuf), RPAREN
 | '[' -> add_word pos (Ulexing.lexeme_length lexbuf), LSQ
 | ']' -> add_word pos (Ulexing.lexeme_length lexbuf), RSQ
-| "{|" -> add_word pos (Ulexing.lexeme_length lexbuf), LBOX
-| "|}" -> add_word pos (Ulexing.lexeme_length lexbuf), RBOX
+(* | "{|" -> add_word pos (Ulexing.lexeme_length lexbuf), LBOX *)
+(* | "|}" -> add_word pos (Ulexing.lexeme_length lexbuf), RBOX *)
 | '.' -> add_word pos (Ulexing.lexeme_length lexbuf), DOT
 | ',' -> add_word pos (Ulexing.lexeme_length lexbuf), COMMA
 | ';' -> add_word pos (Ulexing.lexeme_length lexbuf), SEMICOLON

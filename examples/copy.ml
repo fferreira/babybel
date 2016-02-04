@@ -12,7 +12,7 @@ fix : (tm -> tm) -> tm.
 
 |def}]
 
-let rec copy [@type "g . {|g |- tm|} -> {|g |- tm|}"] =
+let rec copy [@type "g . [g |- tm] -> [g |- tm]"] =
   function
   | {p| #x |p} -> {t| #x |t}
   | {p| z |p} -> {t| z|t}

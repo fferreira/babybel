@@ -19,7 +19,7 @@ type (_, _) rel
   | Both : ('g, 'd) rel -> (('g, tp_tm base) cons, ('d, tp_tmc base) cons) rel
 
 
-let rec lookup [@type "g d . {|g |- tm|} -> (g, d) rel -> {|d |- tmc|}"] =
+let rec lookup [@type "g d . [g |- tm] -> (g, d) rel -> [d |- tmc]"] =
   fun t -> function
 	| Empty -> assert false (* cannot lookup in an empty context *)
 	| Both r' ->
@@ -30,7 +30,7 @@ let rec lookup [@type "g d . {|g |- tm|} -> (g, d) rel -> {|d |- tmc|}"] =
 		    in {t| *, x |- 'v1 [^1 ;] |t}
 	   end
 
-let rec copy [@type "g d . {|g |- tm|} -> (g, d) rel -> {|d |- tmc|}"] =
+let rec copy [@type "g d . [g |- tm] -> (g, d) rel -> [d |- tmc]"] =
   fun x -> fun rel -> match x with
   | {p| #x |p} -> lookup {t| #x |t} rel
   | {p| c |p} -> {t| cc |t}

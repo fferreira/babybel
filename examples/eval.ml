@@ -14,7 +14,7 @@ fix : (tm -> tm) -> tm.
 
 |def}]
 
-let rec eval [@type "{|tm|} -> {|tm|}"] = function
+let rec eval [@type "[tm] -> [tm]"] = function
   | {p| z |p} -> {t| z |t}
   | {p| s 'n |p} -> let nv = eval n in {t| s 'nv |t}
   | {p| lam (\x. 'm) |p} -> {t| lam (\x. 'm) |t}

@@ -13,7 +13,7 @@ lam : (tm -> tm) -> tm.
    not work for applications
  *)
 
-let rec count [@type "g. {|g, x : tm |- tm|} -> int"] =
+let rec count [@type "g. [g, x : tm |- tm] -> int"] =
   function
   | {p| *, x |- c |p} -> 0
   | {p| *, x |- app 'm 'n |p} -> count m + count n
@@ -26,7 +26,7 @@ let t0 = {t| x |- x |t}
 let t1 = {t| x |- c |t}
 let t2 = {t| x |- lam (\y. app x y) |t}
 let t3 = {t| x |- lam (\x. app x x) |t}
-let t4 [@type "{|x |- tm|}"] = {t| x |- lam (\y. app (lam (\z. app(app (app x z) y) x)) x) |t}
+let t4 [@type "[x |- tm]"] = {t| x |- lam (\y. app (lam (\z. app(app (app x z) y) x)) x) |t}
 let t5 = {t| x |- app x x |t}
 let t6 = {t| *, x, y |- x |t}
 

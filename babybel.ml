@@ -72,7 +72,7 @@ let parse_typ_ann s =
 		m.typ m t
 	in
 	let parse s =
-		if starts_with "{" (String.trim s)
+		if starts_with "[" (String.trim s)
 		then parse Sfparser.typ_ann s
 		else
 			begin

@@ -21,8 +21,8 @@
 %token RPAREN
 %token LSQ
 %token RSQ
-%token LBOX
-%token RBOX
+(* %token LBOX *)
+(* %token RBOX *)
 %token EOF
 
 %right ARR
@@ -102,8 +102,8 @@ ctx_term :
 
 
 typ_ann_no_eof:
-| LBOX g = ctx VDASH t = ID RBOX { CType (g, t) }
-| LBOX t = ID RBOX { CType (Empty, t) }
+| LSQ g = ctx VDASH t = ID RSQ { CType (g, t) }
+| LSQ t = ID RSQ { CType (Empty, t) }
 
 typ_ann:
 | t = typ_ann_no_eof EOF { t}

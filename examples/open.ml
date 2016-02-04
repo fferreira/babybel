@@ -17,7 +17,7 @@ let t1  = {t| |- s z |t}
 let t2  = {t| z |t}
 let t3 = {t| *, x, y |- x |t}
 
-let is_top [@type "d. {| d , x : tm |- tm |} -> bool"] = function
+let is_top [@type "d. [d , x : tm |- tm] -> bool"] = function
   | {p| *, x |- x |p} -> true
   |  _ -> false
 
@@ -29,7 +29,7 @@ let tt3 = is_top t3
 
 let e = {t| lam (\x. lam (\y. app x y )) |t}
 
-let multiple [@type "{|tm|} -> {|tm|}"]  = function
+let multiple [@type "[tm] -> [tm]"]  = function
   | {p| lam (\x. lam (\y. 'm)) |p} -> {t| 'm [(s z) ;  z] |t}
   | e -> e
 
