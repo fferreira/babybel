@@ -136,13 +136,3 @@ module SyntacticFramework (S : sig type _ constructor end) = struct
     let single_subst : type g d s t. ((g, s) cons, t) tm1 -> (g, s) tm1 -> (g, t) tm1 =
       fun m n -> sub_tm1 (Dot (Shift Id, n)) m
   end
-
-(* Examples *)
-
-type _ signature = Unit : (unit base) signature
-
-
-module SFU = SyntacticFramework(struct type 'a constructor = 'a signature end)
-
-
-let x : (nil, unit base) SFU.tm0 = SFU.C (Unit, SFU.Empty)

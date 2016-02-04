@@ -42,6 +42,7 @@ let rec main_scanner pos = lexer
 | ':' -> add_word pos (Ulexing.lexeme_length lexbuf), COLON
 | '(' -> add_word pos (Ulexing.lexeme_length lexbuf), LPAREN
 | '#' -> add_word pos (Ulexing.lexeme_length lexbuf), SHARP
+| '*' -> add_word pos (Ulexing.lexeme_length lexbuf), STAR
 | '\'' -> add_word pos (Ulexing.lexeme_length lexbuf), APOSTROPHE
 | ')' -> add_word pos (Ulexing.lexeme_length lexbuf), RPAREN
 | '[' -> add_word pos (Ulexing.lexeme_length lexbuf), LSQ

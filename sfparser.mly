@@ -13,6 +13,7 @@
 %token SHIFT
 %token APOSTROPHE
 %token SHARP
+%token STAR
 
 %token <string> ID
 %token <int> NUM
@@ -52,13 +53,13 @@ decls :
 ctx:
 | DOT  { Empty } (* empty context *)
 | g = ID { CtxVar g } (* context variable (in patterns only) *)
-| v = ID COLON vv = ID  { Cons (Empty, v, Some (Usf.TConst vv)) } (* unary context *)
-| g = ctx COMMA v = ID COLON t = tp { Cons (g, v, Some t) }
+| v = ID COLON vv = ID  { Cons (Empty, v, Usf.TConst vv) } (* unary context *)
+| g = ctx COMMA v = ID COLON t = tp { Cons (g, v, t) }
 
 ctx_no_annot:
-| DOT  { Empty } (* empty context *)
-| g = ctx_no_annot COMMA v = ID { Cons (g, v, None) }
-| v = ID  { Cons (Empty, v, None) } (* unary context *)
+| STAR { Rest }
+| g = ctx_no_annot COMMA v = ID { TCons (g, v) }
+| v = ID  { TCons (Rest, v) } (* unary context *)
 
 term_expr:
 | m = term EOF { m}
@@ -96,8 +97,8 @@ ctx_term_expr:
 
 ctx_term :
 | g = ctx_no_annot VDASH m = term { g , m }
-| VDASH m = term { Empty , m }
-| m = term { Empty , m }
+| VDASH m = term { Rest , m }
+| m = term { Rest , m }
 
 
 typ_ann_no_eof:

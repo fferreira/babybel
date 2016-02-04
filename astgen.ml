@@ -225,16 +225,10 @@ let rec typ_ann_to_ast flag vs =
     | Syntax.CtxVar v when List.mem v vs ->  build_typ_const v
     (* otherwise it is a polymorphic variable *)
     | Syntax.CtxVar v -> build_typ_var v
-    | Syntax.Cons (g, x, Some t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
-    | Syntax.Cons (_, _, None) -> raise (AST_gen_error "missing type annotation on context")
+    | Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
   in
   function
   | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast flag vs t1] -> [%t typ_ann_to_ast flag vs t2]]
-  (* MMM when I do the following line do it also inside contextual types CType *)
-  (* MMM also I need to add the type a b c. quantifier at the begining of the term (now that is in babebel.ml *)
-  (* | Syntax.TAny (Some v) when List.mem v vs -> core_type (Ptyp_constr (wrap (Lident v), [])) *)
-  (* | Syntax.TAny _ -> [%type: _] *)
-
-	| Syntax.CoreType (t, _) when flag = Variables -> t
-	| Syntax.CoreType (_, t) -> t
+  | Syntax.CoreType (t, _) when flag = Variables -> t
+  | Syntax.CoreType (_, t) -> t
   | Syntax.CType (g, s) -> [%type: ([%t ctx_to_typ_ann g], [%t build_base_typ_constr (typ_name s) build_typ_const]) tm1]
