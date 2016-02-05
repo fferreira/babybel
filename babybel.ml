@@ -58,34 +58,34 @@ let parse_typ_ann s =
 			Invalid_argument _ -> false
 	in
 	let replace_typ_constr t =
-		let rec m = { default_mapper with
-							typ = (fun mapper t ->
-										 match t with
-										 | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
-												{t with
-													ptyp_desc = Ptyp_var n
-												}
-										 | other -> default_mapper.typ mapper other
-										)
-						}
-		in
-		m.typ m t
+	  let rec m = { default_mapper with
+			typ = (fun mapper t ->
+			       match t with
+			       | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
+				  {t with
+				    ptyp_desc = Ptyp_var n
+				  }
+			       | other -> default_mapper.typ mapper other
+			      )
+		      }
+	  in
+	  m.typ m t
 	in
 	let parse s =
-		if starts_with "[" (String.trim s)
-		then parse Sfparser.typ_ann s
-		else
-			begin
-				let t = Parse.core_type (Lexing.from_string s) in
-				Syntax.CoreType (replace_typ_constr t, t)
-			end
+	  if starts_with "[" (String.trim s)
+	  then parse Sfparser.typ_ann s
+	  else
+	    begin
+	      let t = Parse.core_type (Lexing.from_string s) in
+	      Syntax.CoreType (replace_typ_constr t, t)
+	    end
 	in
 	let ss = Str.split (Str.regexp "->") s in
 	let tr = List.map parse ss in
 	let rec build_type = function
-		| [t] -> t
-		| t::ts -> Syntax.Arr(t, build_type ts)
-		| [] -> raise (Some_error "build_type hast to get one type (this cannot happen)")
+	  | [t] -> t
+	  | t::ts -> Syntax.Arr(t, build_type ts)
+	  | [] -> raise (Some_error "build_type hast to get one type (this cannot happen)")
 	in
 	build_type tr
 
