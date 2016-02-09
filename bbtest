@@ -6,5 +6,7 @@
 #use "examples/count.ml";;
 #use "examples/copy.ml";;
 #use "examples/copy_representation.ml";;
+#use "examples/cps.ml";;
+#use "examples/typing.ml";;
 
 exit 0;;
