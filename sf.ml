@@ -13,7 +13,7 @@ type _ ctx
 
 (* The module for the syntactic framework *)
 
-module SyntacticFramework (S : sig type _ constructor end) = struct
+module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constructor -> string end) = struct
 
     (* Terms *)
     type (_,_) var =
@@ -135,4 +135,27 @@ module SyntacticFramework (S : sig type _ constructor end) = struct
 
     let single_subst : type g d s t. ((g, s) cons, t) tm1 -> (g, s) tm1 -> (g, t) tm1 =
       fun m n -> sub_tm1 (Dot (Shift Id, n)) m
+
+     (* Pretty printer  *)
+
+    let rec pp_tm1 : type g t . Format.formatter -> (g, t) tm1 -> unit =
+      fun f t -> match t with
+		 | Lam m -> Format.fprintf f "\\x. %a" pp_tm1 m
+		 | Tm0 m -> pp_tm0 f m
+
+    and pp_tm0 : type g t . Format.formatter -> (g, t) tm0 -> unit =
+      fun f t -> match t with
+		 | Var v -> pp_var f v
+		 | C (c, sp) -> Format.fprintf f "%s %a" (S.to_string c) pp_sp sp
+   and pp_sp : type g s t . Format.formatter -> (g, s, t) sp -> unit =
+      fun f sp -> match sp with
+		  | Empty -> ()
+		  | Cons (m, Empty) -> Format.fprintf f "%a" pp_tm1 m
+		  | Cons (m, sp) -> Format.fprintf f "(%a %a)" pp_tm1 m pp_sp sp
+   and pp_var : type g t . Format.formatter -> (g, t) var -> unit =
+      let rec var_to_int : type g t. (g, t) var -> int = function
+	| Top -> 0
+	| Pop v' -> 1 + var_to_int v'
+      in
+      fun f v -> Format.fprintf f "%d" (var_to_int v)
   end

@@ -12,9 +12,12 @@ exception AST_gen_error of string
 let typ_name n = "tp_" ^ n
 let con_name n = "CON_" ^ n
 let unique_con_name n = "T" ^ n
+
 let signature_typ_name = "signature"
+let signature_to_string_name = "signature_to_string"
 let sf_module_name = "SyntacticFramework"
 let sf_signature_typ_name = "constructor"
+let sf_signature_to_string = "to_string"
 let sf_instance_name = "SFU"
 
 (* Generate ASTs *)
@@ -120,7 +123,7 @@ let decls_to_ast ds =
       }
     in
     let sf_mod_apply =
-      Pmod_structure
+      Pmod_structure (* first the type for constructors *)
         [{pstr_desc =
             Pstr_type
               [{ ptype_name = wrap sf_signature_typ_name
@@ -135,7 +138,18 @@ let decls_to_ast ds =
 	       ; ptype_loc = Location.none
 	       }]
 	 ; pstr_loc = Location.none
-	 }]
+	 }
+	(* and then the type for the to string function *)
+	; {pstr_desc = Pstr_value (Nonrecursive,[{ pvb_pat = { ppat_desc = Ppat_var (wrap sf_signature_to_string)
+							     ; ppat_loc = Location.none
+							     ; ppat_attributes = []
+							     }
+						 ; pvb_expr = expression (Pexp_ident (wrap (Lident signature_to_string_name)))
+						 ; pvb_loc = Location.none
+						 ; pvb_attributes = []
+						 }])
+	  ; pstr_loc = Location.none
+	  }]
     in
     { pstr_desc = Pstr_module
 		    { pmb_name = wrap sf_instance_name
@@ -148,17 +162,52 @@ let decls_to_ast ds =
     ; pstr_loc = Location.none
     }
   in
-  let open_sf =  { pstr_desc =
-		     Pstr_open { popen_lid = wrap (Lident sf_instance_name)
-			       ; popen_override = Fresh
-			       ; popen_loc = Location.none
-			       ; popen_attributes = []
-			       }
-		 ; pstr_loc = Location.none
-		 }
+  let open_sf = { pstr_desc =
+		    Pstr_open { popen_lid = wrap (Lident sf_instance_name)
+			      ; popen_override = Fresh
+			      ; popen_loc = Location.none
+			      ; popen_attributes = []
+			      }
+		; pstr_loc = Location.none
+		}
+  in
+  (* generates function to_string *)
+  let gen_to_string_fn cons =
+    let cons_names = List.map fst cons in
+    let function_body =
+      let gen_branch n =
+	{ pc_lhs = { ppat_desc = Ppat_construct (wrap (Lident (con_name n)), None)
+		   ; ppat_loc = Location.none
+		   ; ppat_attributes = []
+		   }
+	; pc_guard = None
+	; pc_rhs = str n
+	}
+      in
+      (* Pexp_function (List.map gen_branch cons_names) *)
+      [%expr fun _ -> assert false]
+    in
+    let typ = core_type (Ptyp_arrow ( ""
+				    , core_type (Ptyp_constr ( wrap (Lident signature_typ_name)
+							     , [build_typ_var "a"]))
+				    , core_type (Ptyp_constr (wrap (Lident "string"), []))))
+    in
+    { pstr_desc =
+	Pstr_value (Nonrecursive,
+		    [{ pvb_pat = { ppat_desc = Ppat_var (wrap signature_to_string_name)
+				 ; ppat_loc = Location.none
+				 ; ppat_attributes = []
+				 }
+		     ; pvb_expr = expression (Pexp_constraint (function_body, typ))
+		     (* ; pvb_expr = expression (Pexp_constraint (expression function_body, typ)) *)
+		     ; pvb_loc = Location.none
+		     ; pvb_attributes = []
+		     }])
+    ; pstr_loc = Location.none
+    }
   in
   let (tps, cons) = List.partition (function _, Is_kind -> true | _ -> false) ds in
-  List.map generate_new_type tps @ [generate_constr_type cons] @ [sf_instance; open_sf]
+  List.map generate_new_type tps @ [generate_constr_type cons; gen_to_string_fn cons] @ [sf_instance; open_sf]
 
 let rec index_to_var = function
   | 0 -> [%expr Top]
