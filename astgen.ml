@@ -171,8 +171,39 @@ let decls_to_ast ds =
 		; pstr_loc = Location.none
 		}
   in
+  (* Code to register pretty printers, the level, id, Types module
+     need to be changed so it works *)
+  (* let register_pretty_printers = *)
+  (*   { pstr_desc = *)
+  (* 	Pstr_value (Nonrecursive, [{ pvb_pat = { ppat_desc = Ppat_any *)
+  (* 					       ; ppat_loc = Location.none *)
+  (* 					       ; ppat_attributes = [] *)
+  (* 					       } *)
+  (* 				   ; pvb_expr = *)
+  (* 				       [%expr Toploop.install_printer *)
+  (* 					      (Path.Pident (Ident.create "SFU")) *)
+  (* 					      ({ desc = Types.Tconstr (Path.Pident (Ident.create "tm1"), [], ref Types.Mnil) *)
+  (* 					       ; level = 100 (\* higher => more polymorphic *\) *)
+  (* 					       ; id = 42 (\* I don't know what is this for, so... *\) *)
+  (* 					       }) *)
+  (* 					      (Obj.magic pp_tm1)] *)
+  (* 				   ; pvb_loc = Location.none *)
+  (* 				   ; pvb_attributes = [] *)
+  (* 				   }]) *)
+  (*   ; pstr_loc = Location.none *)
+  (*   } *)
+  (* in *)
   (* generates function to_string *)
   let gen_to_string_fn cons =
+    (* constrain *)
+    let constr e t =
+      expression(Pexp_constraint (e, t))
+    in
+    let typ var_const = core_type (Ptyp_arrow ( ""
+					      , core_type (Ptyp_constr ( wrap (Lident signature_typ_name)
+								       , [var_const "a"]))
+					      , core_type (Ptyp_constr (wrap (Lident "string"), []))))
+    in
     let cons_names = List.map fst cons in
     let function_body =
       let gen_branch n =
@@ -184,13 +215,9 @@ let decls_to_ast ds =
 	; pc_rhs = str n
 	}
       in
-      (* Pexp_function (List.map gen_branch cons_names) *)
-      [%expr fun _ -> assert false]
-    in
-    let typ = core_type (Ptyp_arrow ( ""
-				    , core_type (Ptyp_constr ( wrap (Lident signature_typ_name)
-							     , [build_typ_var "a"]))
-				    , core_type (Ptyp_constr (wrap (Lident "string"), []))))
+      let body = Pexp_function (List.map gen_branch cons_names) in
+      [%expr fun (type a) -> [%e constr (expression body) (typ build_typ_const)]]
+
     in
     { pstr_desc =
 	Pstr_value (Nonrecursive,
@@ -198,8 +225,7 @@ let decls_to_ast ds =
 				 ; ppat_loc = Location.none
 				 ; ppat_attributes = []
 				 }
-		     ; pvb_expr = expression (Pexp_constraint (function_body, typ))
-		     (* ; pvb_expr = expression (Pexp_constraint (expression function_body, typ)) *)
+		     ; pvb_expr = constr function_body (typ build_typ_var)
 		     ; pvb_loc = Location.none
 		     ; pvb_attributes = []
 		     }])
@@ -207,7 +233,9 @@ let decls_to_ast ds =
     }
   in
   let (tps, cons) = List.partition (function _, Is_kind -> true | _ -> false) ds in
-  List.map generate_new_type tps @ [generate_constr_type cons; gen_to_string_fn cons] @ [sf_instance; open_sf]
+  List.map generate_new_type tps @
+    [generate_constr_type cons; gen_to_string_fn cons] @
+      [sf_instance; open_sf (*; register_pretty_printers*)]
 
 let rec index_to_var = function
   | 0 -> [%expr Top]
