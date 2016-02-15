@@ -24,7 +24,6 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
       = Var : ('g, 'a base) var -> ('g, 'a base) tm0
       | C : 't S.constructor * ('g, 't, 'a base) sp -> ('g, 'a base) tm0
 
-
      and (_,_,_) sp
        = Empty : ('g, 't, 't) sp
        | Cons : ('g, 't1) tm1 * ('g, 't2, 't3) sp -> ('g, ('t1, 't2) arr, 't3) sp
@@ -83,6 +82,7 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
     and ren_tm1 : type g d t. (g, d) ren -> (g, t) tm1 -> (d, t) tm1 =
       fun r -> function
 	    | Lam m -> Lam (ren_tm1 (wkn_ren r) m)
+	    | Box m -> Box m
 	    | Tm0 n -> Tm0 (ren_tm0 r n)
 
     let rec shift_tm0 : type g d t. (g, d) shift -> (g, t) tm0 -> (d, t) tm0 =
@@ -98,6 +98,7 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
     and shift_tm1 : type g d t. (g, d) shift -> (g, t) tm1 -> (d, t) tm1 =
       fun sh -> function
 	     | Lam m -> Lam (ren_tm1 (DotR (ShiftR (Suc sh), Top)) m)
+	     | Box m -> Box m
 	     | Tm0 n -> Tm0 (shift_tm0 sh n)
 
     (* Substitutions *)
@@ -133,6 +134,7 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
     and sub_tm1 : type g d t. (g, d) sub -> (g, t) tm1 -> (d, t) tm1 =
       fun s -> function
 	    | Lam m -> Lam (sub_tm1 (wkn_sub s) m)
+	    | Box m -> Box m
 	    | Tm0 n -> sub_tm0 s n
 
     let single_subst : type g d s t. ((g, s) cons, t) tm1 -> (g, s) tm1 -> (g, t) tm1 =
@@ -143,6 +145,7 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
     let rec pp_tm1 : type g t . Format.formatter -> (g, t) tm1 -> unit =
       fun f t -> match t with
 		 | Lam m -> Format.fprintf f "\\x. %a" pp_tm1 m
+		 | Box m -> Format.fprintf f "{%a}" pp_tm1 m
 		 | Tm0 m -> pp_tm0 f m
 
     and pp_tm0 : type g t . Format.formatter -> (g, t) tm0 -> unit =
