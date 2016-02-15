@@ -22,7 +22,8 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
 
     type (_,_) tm0
       = Var : ('g, 'a base) var -> ('g, 'a base) tm0
-      | C : 't S.constructor * ('g, 't,  'a base) sp -> ('g, 'a base) tm0
+      | C : 't S.constructor * ('g, 't, 'a base) sp -> ('g, 'a base) tm0
+
 
      and (_,_,_) sp
        = Empty : ('g, 't, 't) sp
@@ -30,6 +31,7 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
 
      and (_,_) tm1
        = Lam : (('g, 'a base) cons, 't) tm1 -> ('g, ('a base, 't) arr) tm1
+       | Box :  (nil, 't) tm1 -> ('g, 't) tm1
        | Tm0 : ('g, 'a base) tm0 -> ('g, 'a base) tm1
 
     (* Shifts of indices *)

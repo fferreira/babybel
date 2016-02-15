@@ -58,6 +58,7 @@ let build_base_typ_constr s f = wrap_type_in_base (f s)
 let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
   | TConst n -> build_base_typ_constr (typ_name n) build_typ_const
   | Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
+  | TBox t -> [%type: ([%t generate_core_type t])]
 
 let decls_to_ast ds =
   (* generate an ocaml type for each kind in the signature *)
@@ -248,6 +249,7 @@ let rec t1_to_ast = function
   | Meta u -> evar u
   | Par (u, 1) -> [%expr Tm0(Var [%e evar u])]
   | Par (_, n) -> raise (AST_gen_error "unimplemented par n")
+  | Box m -> [%expr Box [%e t1_to_ast m]]
 
 and t0_to_ast = function
   | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
@@ -282,6 +284,7 @@ let rec t1_to_pat_ast = function
   | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
   | Meta u -> pvar u
   | Par (u, n) -> [%pat? Tm0(Var [%p gen_pvar_pop_pat (pvar u) n])]
+  | Box m -> [%pat? Box [%p t1_to_pat_ast m]]
 
 and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]

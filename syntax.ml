@@ -10,6 +10,7 @@ type term
   | Var of var
   | MVar of var
   | PVar of var * int
+  | Box of term
 
  (* a shift and a list of terms to substitute for variables *)
  and sub = int * term list

@@ -30,6 +30,10 @@ let rec index_term (sg : signature) (c : ctx_tm) (m : term) : tm1 =
   | MVar x -> Meta x
   | PVar (x, n) -> Par (x, n)
   | AppS (m, s') -> AppS(index_term sg c m, index_sub sg c s')
+  (* terms inside boxed should be closed, so the
+  recursive call to index_term should pass an empty context instead of
+  c, but we get nicer errors if we let that fail in typecheckin *)
+  | Box m -> Box(index_term sg c m)
   | _ -> raise (Indexing_failure "non-normal 2nd order term while indexing")
 
 and index_sp sg c = function

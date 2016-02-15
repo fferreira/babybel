@@ -6,6 +6,7 @@ type name = string
 type tp
   = TConst of name
   | Arr of tp * tp
+  | TBox of tp
 
 type type_or_kind
   = Is_kind
@@ -27,5 +28,6 @@ type tm0
    | Meta of name
    | Par of name * int
    | AppS of tm1 * sub
+   | Box of tm1
 
  and sub = int * tm1 list

@@ -21,6 +21,8 @@
 %token RPAREN
 %token LSQ
 %token RSQ
+%token LCURLY
+%token RCURLY
 (* %token LBOX *)
 (* %token RBOX *)
 %token EOF
@@ -38,6 +40,7 @@ tp :
 | c = ID { Usf.TConst c }
 | s = tp ARR t = tp { Usf.Arr (s, t) }
 | LPAREN t = tp RPAREN { t }
+| LCURLY t = tp RCURLY { Usf.TBox t }
 
 kot :
 | TYPE { Usf.Is_kind }
@@ -74,6 +77,7 @@ simple_term:
 | v = ID { Var v }
 | APOSTROPHE v = ID { MVar v }
 | sh = SHARP+ v = ID { PVar (v, List.length sh) }
+| LCURLY m = term RCURLY { Box m }
 
 shift:
 | SHIFT n = NUM SEMICOLON { n }
