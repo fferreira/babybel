@@ -46,6 +46,10 @@ let wrap_type_in_base t =
   core_type (Ptyp_constr ( wrap (Lident "base")
 			 , [t]))
 
+let wrap_type_in_boxed t =
+  core_type (Ptyp_constr ( wrap (Lident "boxed")
+			 , [t]))
+
 (* build a polymorhpich type variable *)
 let build_typ_var s =
   core_type (Ptyp_var s)
@@ -58,7 +62,7 @@ let build_base_typ_constr s f = wrap_type_in_base (f s)
 let rec generate_core_type : Usf.tp -> Parsetree.core_type = function
   | TConst n -> build_base_typ_constr (typ_name n) build_typ_const
   | Arr (t1, t2) -> [%type: ([%t generate_core_type t1], [%t generate_core_type t2]) arr]
-  | TBox t -> [%type: ([%t generate_core_type t])]
+  | TBox t -> wrap_type_in_boxed [%type: ([%t generate_core_type t])]
 
 let decls_to_ast ds =
   (* generate an ocaml type for each kind in the signature *)

@@ -1,6 +1,7 @@
 (* The intrinsically typed second order syntactical framework *)
 
 type _ base = B
+type _ boxed = Bo
 type (_,_) arr = A
 
 (* Type level and singleton contexts *)
@@ -30,7 +31,7 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
 
      and (_,_) tm1
        = Lam : (('g, 'a base) cons, 't) tm1 -> ('g, ('a base, 't) arr) tm1
-       | Box :  (nil, 't) tm1 -> ('g, 't) tm1
+       | Box :  (nil, 't) tm1 -> ('g, 't boxed) tm1
        | Tm0 : ('g, 'a base) tm0 -> ('g, 'a base) tm1
 
     (* Shifts of indices *)
