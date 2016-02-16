@@ -9,5 +9,6 @@
 #use "examples/cps.ml";;
 #use "examples/oldtyping.ml";;
 #use "examples/typing.ml";;
+#use "examples/clo.ml";;
 
 exit 0;;
