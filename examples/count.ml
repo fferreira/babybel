@@ -9,10 +9,6 @@ lam : (tm -> tm) -> tm.
 
 (* open terms *)
 
-(* More careful generation of type annotations is needed as this does
-   not work for applications
- *)
-
 let rec count [@type "g. [g, x : tm |- tm] -> int"] =
   function
   | {p| *, x |- c |p} -> 0
@@ -20,7 +16,6 @@ let rec count [@type "g. [g, x : tm |- tm] -> int"] =
   | {p| *, x |- lam (\y. 'm) |p} -> count {t| *, x, y |- 'm [^2; y ; x] |t}
   | {p| *, x |- x |p} -> 1
   | {p| #x |p} -> 0
-  (* | _ -> 0 *) (* this cases matches variables that are not the top one *)
 
 let t0 = {t| x |- x |t}
 let t1 = {t| x |- c |t}
