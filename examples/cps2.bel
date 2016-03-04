@@ -1,0 +1,72 @@
+% This is the untyped version from the beluga examples at
+% examples/typed-compilation/cps-popl-tutorial2-crec.bel
+
+exp   : type.
+value : type.
+
+app   : exp -> exp -> exp.
+lam   : (value -> exp) -> value.
+ret   : value -> exp.
+
+contra : type.
+cvalue : type.
+kont : type.
+capp   : cvalue -> cvalue -> kont -> contra.
+clam   : (cvalue -> kont -> contra) -> cvalue.
+k : (cvalue -> contra) -> kont.
+adm: kont -> cvalue -> contra.
+
+%
+
+ccontra : type.
+ccvalue : type.
+ckont : type.
+bind : type.
+
+done : (cvalue -> contra) -> bind.
+more : (cvalue -> bind) -> bind.
+
+ccapp : cvalue -> cvalue -> kont -> contra.
+cclam : (kont -> bind) -> cvalue.
+ck : bind -> kont.
+cadm: kont -> cvalue -> contra.
+
+
+
+
+% Translating values to cvalues
+% and exp to cexp
+schema ctx = block x:value, _t:cvalue ;
+
+rec cps : (g:ctx)[g |- value] -> [g |- cvalue] =
+fn v => case v of
+| [g |- #p.1] => [g |- #p.2]
+| {E:[g, x:value |-  exp] }
+  [g |- lam \x. E] =>
+
+  let [g, b:block (x:value , _t:cvalue), c:kont |-  E'[..,b.2,c]] =
+      cpse [g,b:block (x:value , _t:cvalue) |-  E[..,b.1] ] in
+  [g |- clam \v.\c. E'[..,v, c]]
+
+
+and cpse : (g:ctx)[g |- exp] -> [g, c: kont |-  contra] =
+fn e => case e of
+| [g |- ret (V )] =>
+  let [g |- V'] = cps [g |- V ] in
+  [g,c |- adm c  (V'[..] )]
+
+| [g |- app (E1 ) (E2 )] =>
+  let [g, c:kont |-  E1'[..,c]] = cpse [g |- E1 ] in
+  let [g, c:kont |-  E2'[..,c]] = cpse [g |- E2 ] in
+    [g,c |- E1'[..,(k (\f. E2'[..,(k (\x. capp f x c))]))]]
+
+;
+
+% cval: type.
+% cv: cvalue T -> cval.
+
+% rec eval : [ |- contra] -> [ |- cval] =
+% fn e => case e of
+%  | [ |- capp (clam \v.\k. E)  Cv2  (\x. K)] =>
+%      eval [ |- E [Cv2, (\x. K)]]
+% ;

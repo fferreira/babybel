@@ -1,0 +1,85 @@
+tm: type.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+
+ctm: type.
+btm: type.
+
+capp: ctm -> ctm -> ctm.
+clam: btm -> ctm.
+b : ctm.
+
+e: (ctm -> ctm) -> btm.
+c: (ctm -> btm) -> btm.
+
+sub : type.
+empty: sub.
+dot: sub -> ctm -> sub.
+
+clo: ctm -> sub -> ctm.
+
+let t1 = [|- clam (e (\x. x))];
+
+schema ctx = tm;
+schema cctx = ctm;
+
+inductive Ctx_rel : {g:ctx}{h:cctx} ctype =
+| Rnil : Ctx_rel [] []
+| Rsnoc: Ctx_rel [g] [h] -> Ctx_rel [g, x:tm] [h,x:ctm]
+;
+
+% inductive CtxObj : {h:cctx} ctype =
+%   | Ctx : {h:cctx} CtxObj [h]
+% ;
+
+rec lookup : Ctx_rel [g][h] -> [g |- tm] -> [h |- ctm] =
+    fn r => fn t => case t of
+    | [g, x:tm |- x] =>
+      let Rsnoc r =  r in
+      [_, x:ctm |- x]
+    | [g, x:tm |- #v[..]] =>
+      let Rsnoc r =  r in
+      let [h |- M] = lookup r [g |- #v] in
+      [h, x:ctm |- M[..]]
+;
+
+rec close : Ctx_rel [g][h] -> [h |- btm] -> [|- btm] =
+    / total r (close _ _ r) /
+    fn r => fn m => case r of
+    | Rnil => m
+    | Rsnoc r =>
+      let [h, x:ctm |- M] = m in
+      close r [h |- c (\x. M)]
+;
+
+rec envr : Ctx_rel[g][h] -> [h |- sub] =
+    / total r (envr _ _ r) /
+    fn r => case r of
+    | Rnil => [_ |- empty]
+    | Rsnoc r =>
+      let [_ |- S] = envr r in
+      [_,x:ctm |- dot S[..] x]
+;
+
+rec conv : Ctx_rel [g] [h] -> [g |- tm] -> [h |- ctm] =
+    fn r => fn m => case m of
+    | [g |- lam \x. M] =>
+      let [h, x:ctm |- Mc] = conv (Rsnoc r) [g, x:tm |- M] in
+      let [|- Mb] = close r [h |- e (\x. Mc)] in
+      let [_ |- S] = envr r in
+      [_ |- clo (clam Mb[]) S]
+
+    | [g |- #x] => lookup r [g |- #x]
+    | [g |- app M N] => % work out how to apply closures here
+      let [h |- MM] = conv r [g |- M] in
+      let [h |- NN] = conv r [g |- N] in
+      [h |- capp MM NN]
+
+;
+
+let t0 = [|- lam (\x. x)];
+let r0 = conv Rnil t0;
+
+let t1 = [|- lam (\x. lam \y. app x y)];
+let r1 = conv Rnil t1;
