@@ -20,16 +20,23 @@ adm: kont -> cvalue -> contra.
 
 ccontra : type.
 ccvalue : type.
-ckont : type.
-bind : type.
+ckont: type.
+bds : type.
 
-done : (cvalue -> contra) -> bind.
-more : (cvalue -> bind) -> bind.
+ce : (ccvalue -> ckont -> ccontra) -> bds.
+cc : (ccvalue -> bds) -> bds.
 
-ccapp : cvalue -> cvalue -> kont -> contra.
-cclam : (kont -> bind) -> cvalue.
-ck : bind -> kont.
-cadm: kont -> cvalue -> contra.
+sub: type.
+empty : sub.
+dot: sub -> ccvalue -> sub.
+
+
+ccapp   : ccvalue -> ccvalue -> ckont -> ccontra.
+cclam   : bds -> ccvalue.
+clo: ccvalue -> sub -> ccvalue.
+
+ckk: (ccvalue -> ccontra) -> ckont.
+cadm: ckont -> ccvalue -> ccontra.
 
 
 
@@ -62,6 +69,14 @@ fn e => case e of
 
 ;
 
+
+% rec sp : (g: ctx) [g, x: kont |- contra] -> [g, x: kont |- contra] =
+%     fn e => case e of
+%     | [g, x : kont |- cadm (k (\x. M)) V] => [g, x: kont |- M [..,x, V]]
+% and spv : (g: ctx) [] =
+%     fn e => ?
+% ;
+
 % cval: type.
 % cv: cvalue T -> cval.
 
@@ -70,3 +85,29 @@ fn e => case e of
 %  | [ |- capp (clam \v.\k. E)  Cv2  (\x. K)] =>
 %      eval [ |- E [Cv2, (\x. K)]]
 % ;
+
+schema cctx = block x:cvalue, _t:ccvalue ;
+
+rec clo : (g : cctx) [g |- cvalue] -> [g |- ccvalue] =
+    fn e => case e of
+    | [g |- clam (\v. \k. M)] => ?
+% | [g |-
+
+and cloc : (g : cctx) [g |- contra] -> [g |- ccontra] =
+    fn e => case e of
+    | [g |- capp V W K] =>
+      let [g |- V'] = clo [g |- V] in
+      let [g |- W'] = clo [g |- W] in
+      let [g |- K'] = clok [g |- K] in
+      [g |- ccapp V' W' K']
+    | [g |- adm K V] =>
+      let [g |- K'] = clok [g |- K] in
+      let [g |- V'] = clo [g |- V] in
+      [g |- cadm K' V']
+
+and clok : (g : cctx) [g |- kont] -> [g |- ckont] =
+    fn e => case e of
+    | [g |- k (\v. K)] =>
+      let [g |- K'] = cloc [g,b:block x:cvalue, x:ccvalue |- K[.., b.1]] in
+      ?
+;
