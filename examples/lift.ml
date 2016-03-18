@@ -12,7 +12,7 @@ btm: type.
 
 capp: ctm -> ctm -> ctm.
 
-let: {btm} -> (ctm -> ctm) -> ctm.
+let: {btm} -> (ctm -> ctm) -> ctm. (* lambdas are no longer in line in the term, they are always in let expressions *)
 
 e: (ctm -> ctm) -> btm.
 c: (ctm -> btm) -> btm.
