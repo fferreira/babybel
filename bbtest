@@ -12,5 +12,6 @@
 #use "examples/typing.ml";;
 #use "examples/oldclo.ml";;
 #use "examples/clo.ml";;
+#use "example/lift.ml";;
 
 exit 0;;
