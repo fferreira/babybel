@@ -1,8 +1,9 @@
 true : use_menhir, annot
 <sflexer.ml> : syntax(camlp4o), package(ulex)
-<astgen.ml> : package(compiler-libs.common), package(ppx_tools.metaquot)
+<astgen.ml> : package(compiler-libs.common, menhirLib, ulex), package(ppx_tools.metaquot)
 <syntax.ml> : package(compiler-libs.common)
-<babybel.ml> : package(menhirLib, ulex, compiler-libs.common,ppx_tools.metaquot)
+<putil.ml> : package(menhirLib, ulex)
+<babybel.ml> : package(compiler-libs.common,ppx_tools.metaquot, ulex, menhirLib)
 
 
 <*.{native,byte}> : package(ulex, menhirLib, compiler-libs.common, ppx_tools, str)

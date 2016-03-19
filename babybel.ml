@@ -2,33 +2,7 @@ open Ast_mapper
 open Asttypes
 open Parsetree
 
-exception Scanning_error of Lexing.position * string
-exception Syntax_error of Lexing.position
-exception Some_error of string
-
-let file_name = "unknown"
-
 let sigma : Usf.signature ref = ref []
-
-(* Parsing *)
-
-let parser menhir_parser lexbuf =
-  let position = ref (Sflexer.initial_pos file_name) in
-  let lexer () =
-    let ante_position = !position in
-    let post_position, token = Sflexer.main_scanner !position lexbuf in
-    let () = position := post_position in (* Lexing.({!position with pos_lnum = !position.pos_lnum + nlines;}) in *)
-    (token, ante_position, post_position) in
-  let revised_parser = MenhirLib.Convert.Simplified.traditional2revised menhir_parser
-  in try
-       revised_parser lexer
-    with
-      | Sflexer.Error x -> raise (Scanning_error (!position, x))
-      | Sfparser.Error  -> raise (Syntax_error !position)
-
-let parse p s =
-  let lexbuf = Ulexing.from_utf8_string s in
-  parser p lexbuf
 
 (* Session management *)
 
@@ -47,48 +21,6 @@ let load_session unit : unit =
     close_in_noerr f
   with _ -> print_string "No session loaded\n" ; ()
 
-(* parsing type annotations *)
-
-let parse_typ_ann s =
-  (* hack alert *)
-  let starts_with pre s =
-    try
-      String.sub s 0 (String.length pre) = pre
-    with
-      Invalid_argument _ -> false
-  in
-  let replace_typ_constr t =
-    let rec m = { default_mapper with
-		  typ = (fun mapper t ->
-			 match t with
-			 | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
-			    {t with
-			      ptyp_desc = Ptyp_var n
-			    }
-			 | other -> default_mapper.typ mapper other
-			)
-		}
-    in
-    m.typ m t
-  in
-  let parse s =
-    if starts_with "[" (String.trim s)
-    then parse Sfparser.typ_ann s
-    else
-      begin
-	let t = Parse.core_type (Lexing.from_string s) in
-	Syntax.CoreType (replace_typ_constr t, t)
-      end
-  in
-  let ss = Str.split (Str.regexp "->") s in
-  let tr = List.map parse ss in
-  let rec build_type = function
-    | [t] -> t
-    | t::ts -> Syntax.Arr(t, build_type ts)
-    | [] -> raise (Some_error "build_type hast to get one type (this cannot happen)")
-  in
-  build_type tr
-
 (* The rewriter *)
 
 let expr = Astgen.expression
@@ -105,9 +37,9 @@ let process_value_binding (binding : value_binding) : value_binding =
     | PStr [str_item] -> (match str_item.pstr_desc with
 			  | Pstr_eval ({pexp_desc = Pexp_constant(Const_string(ann, _))}, _) ->
 			     ann
-			  | _ -> raise (Some_error "type annotation has an unexpected structure"))
-    | PStr _ -> raise (Some_error "really did not expect more than one structure here")
-    | _ -> raise (Some_error "type annotation on unexpected payload")
+			  | _ -> raise (Error.Some_error "type annotation has an unexpected structure"))
+    | PStr _ -> raise (Error.Some_error "really did not expect more than one structure here")
+    | _ -> raise (Error.Some_error "type annotation on unexpected payload")
 
   in
   try
@@ -122,7 +54,7 @@ let process_value_binding (binding : value_binding) : value_binding =
 	Not_found -> ("", s)
     in
     let a, b = split_on_first_dot typ_ann_str in
-    let vs, typ_ann = Str.split (Str.regexp " ") a, parse_typ_ann b in
+    let vs, typ_ann_str = Str.split (Str.regexp " ") a, b in
 
     let poly_quantify vs t =
       if List.length vs > 0 then
@@ -141,10 +73,10 @@ let process_value_binding (binding : value_binding) : value_binding =
                                  instead of vs because that way the variables become variables
                                  instead of type constructors that will only be bound in the
                                  body of the function *)
-		     						(Astgen.typ_ann_to_ast Astgen.Variables [] typ_ann))
+		     						(Astgen.typ_ann_to_ast Astgen.Variables [] typ_ann_str))
 			      }
     in
-    let tp = Astgen.typ_ann_to_ast Astgen.Constructors vs typ_ann in
+    let tp = Astgen.typ_ann_to_ast Astgen.Constructors vs typ_ann_str in
     let abstract_type_var e tv =
       expr (Pexp_newtype (tv, e))
     in
@@ -166,13 +98,13 @@ let expand_signature : structure_item -> structure = function
 			       , PStr [{pstr_desc =
 					  Pstr_eval({pexp_desc =
 						       Pexp_constant (Const_string (s, _))},_)}])} ->
-     let sigma' = parse Sfparser.decls s in
+     let sigma' = Putil.parse Sfparser.decls s in
      if !sigma = []
      then sigma := sigma'
-     else raise (Some_error "Multiple declaration blocks in the same session") ;
+     else raise (Error.Some_error "Multiple declaration blocks in the same session") ;
      save_session !sigma ;
      Astgen.decls_to_ast sigma'
-  | _ -> raise (Some_error "Violation: expand_signature called on an element lacking the right attribute")
+  | _ -> raise (Error.Some_error "Violation: expand_signature called on an element lacking the right attribute")
 
 let rec process_structure : structure -> structure = function
   | [] -> []
@@ -196,7 +128,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   	    match expr with
   	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } ->
   	       load_session() ;
-  	       let m = Index.index !sigma (parse Sfparser.ctx_term_expr s) in
+  	       let m = Index.index !sigma (Putil.parse Sfparser.ctx_term_expr s) in
   	       Astgen.t1_to_ast m
   	    | other -> default_mapper.expr mapper other)
   (* translate patterns in expressions  *)
@@ -204,7 +136,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   	   match pat with
   	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
   	      load_session () ;
-  	      let m = Index.index !sigma (parse Sfparser.ctx_term_expr s) in
+  	      let m = Index.index !sigma (Putil.parse Sfparser.ctx_term_expr s) in
   	      Astgen.t1_to_pat_ast m
   	   | other -> default_mapper.pat mapper other)
   }

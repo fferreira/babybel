@@ -32,7 +32,7 @@
 %start <Usf.signature>  decls
 %start <Syntax.ctx_term> ctx_term_expr
 %start <Syntax.term> term_expr
-%start <Syntax.typ_ann_body> typ_ann
+%start <Syntax.ctx_tp * Syntax.var> ctx_typ
 
 %%
 
@@ -104,10 +104,9 @@ ctx_term :
 | VDASH m = term { Rest , m }
 | m = term { Rest , m }
 
+ctx_typ_no_eof:
+| LSQ g = ctx VDASH t = ID RSQ { (g, t) }
+| LSQ t = ID RSQ { Empty, t }
 
-typ_ann_no_eof:
-| LSQ g = ctx VDASH t = ID RSQ { CType (g, t) }
-| LSQ t = ID RSQ { CType (Empty, t) }
-
-typ_ann:
-| t = typ_ann_no_eof EOF { t}
+ctx_typ:
+| ct = ctx_typ_no_eof EOF { ct }

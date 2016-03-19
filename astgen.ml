@@ -4,6 +4,7 @@ open Parsetree
 open Asttypes
 open Ast_convenience
 open Longident
+open String
 
 exception AST_gen_error of string
 
@@ -302,17 +303,105 @@ type contructor_flag
 	= Constructors
 	| Variables
 
-let rec typ_ann_to_ast flag vs =
-  let rec ctx_to_typ_ann = function
-    | Syntax.Empty -> [%type: nil]
-    (* if the context var is bound in vs then it should be a type constructor *)
-    | Syntax.CtxVar v when List.mem v vs ->  build_typ_const v
-    (* otherwise it is a polymorphic variable *)
-    | Syntax.CtxVar v -> build_typ_var v
-    | Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_typ_ann g], [%t generate_core_type t]) cons]
+let typ_ann_to_ast flag vs s =
+  let compute_type (s: string) : Parsetree.core_type =
+    let con = ref 0 in
+    let gen_sym () = con := !con + 1 ; "con_" ^ string_of_int !con in
+
+    let two_lvl_split (s: string) : string list =
+      let rec list_of_string s =
+	let len = length s in
+	if len = 0 then []
+	else let fst, rst = s.[0], sub s 1 (len -1) in
+	     fst :: list_of_string rst
+      in
+      let rec string_of_list = function
+	| [] -> ""
+	| c::cs -> Printf.sprintf "%c%s" c (string_of_list cs)
+      in
+      let rec split (sl : char list) (acc : (char list) list) : char list list =
+	let add c = function
+	  | [] -> raise (Error.Some_error "Violation: this cannot happen in split")
+	  | l::ls -> (c::l)::ls
+	in
+	let start s = [] :: s in
+	match sl with
+	| [] -> acc
+	| c::cs when c = '[' -> split cs (add c (start acc))
+	| c::cs when c = ']' -> split cs (start (add c acc))
+	| c::cs -> split cs (add c acc)
+      in
+      List.rev (List.map (fun l -> string_of_list (List.rev l)) (split (list_of_string s) [[]]))
+    in
+    (* splits the list of strings in a type to be parsed and
+       dictionary of the new elements to be later swapped *)
+    let rec prepare (ss : string list) (fst : bool) : string * ((string * string) list) =
+      match ss, fst with
+      | s::ss', true ->
+	 let res, ass = prepare ss' false in
+	 (s ^ res, ass)
+      | s::ss', false ->
+	 let con = gen_sym() in
+	 let res, ass = prepare ss' true in
+	 (con ^ res, ((con, s)::ass))
+      | [], _ -> "", []
+    in
+
+    let ctx_typ_to_core_type (g, s) =
+      let rec ctx_to_core_type = function
+	| Syntax.Empty -> [%type: nil]
+	(* if the context var is bound in vs then it should be a type constructor *)
+	| Syntax.CtxVar v when List.mem v vs ->  build_typ_const v
+	(* otherwise it is a polymorphic variable *)
+	| Syntax.CtxVar v -> build_typ_var v
+	| Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_core_type g], [%t generate_core_type t]) cons]
+      in
+
+      [%type: ([%t ctx_to_core_type g], [%t build_base_typ_constr (typ_name s) build_typ_const]) tm1]
+    in
+
+    let rec substitute (dict : (string * Parsetree.core_type) list)
+		       (t : Parsetree.core_type) : Parsetree.core_type =
+      let m = { Ast_mapper.default_mapper with
+  		typ = (fun mapper t ->
+  		       match t with
+  		       | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
+			  begin try List.assoc n dict
+				with Not_found -> t
+			  end
+  		       | other -> Ast_mapper.default_mapper.typ mapper other
+  		      )
+  	      }
+      in
+      m.typ m t
+    in
+    let process_flag t =
+      match flag with
+      | Variables ->
+	 let m = { Ast_mapper.default_mapper with
+  		   typ = (fun mapper t ->
+  			  match t with
+  			  | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
+  			     {t with
+  			       ptyp_desc = Ptyp_var n
+  			     }
+  			  | other -> Ast_mapper.default_mapper.typ mapper other
+  			 )
+  		 }
+	 in
+	 m.typ m t
+
+      | Constructors -> t
+    in
+    let bar = two_lvl_split s in
+    let typ_str, dict_str = prepare (bar) true in
+    let typ = Parse.core_type (Lexing.from_string typ_str) in
+
+    let dict = List.map (fun (k, v) ->
+
+			 k, ctx_typ_to_core_type (Putil.parse Sfparser.ctx_typ v))
+			dict_str
+    in
+    process_flag (substitute dict typ)
   in
-  function
-  | Syntax.Arr (t1, t2) -> [%type: [%t typ_ann_to_ast flag vs t1] -> [%t typ_ann_to_ast flag vs t2]]
-  | Syntax.CoreType (t, _) when flag = Variables -> t
-  | Syntax.CoreType (_, t) -> t
-  | Syntax.CType (g, s) -> [%type: ([%t ctx_to_typ_ann g], [%t build_base_typ_constr (typ_name s) build_typ_const]) tm1]
+  compute_type s
