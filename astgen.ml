@@ -362,14 +362,15 @@ let typ_ann_to_ast flag vs s =
 
     let rec substitute (dict : (string * Parsetree.core_type) list)
 		       (t : Parsetree.core_type) : Parsetree.core_type =
-      let m = { Ast_mapper.default_mapper with
+      let open Ast_mapper in
+      let m = { default_mapper with
   		typ = (fun mapper t ->
   		       match t with
   		       | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
 			  begin try List.assoc n dict
 				with Not_found -> t
 			  end
-  		       | other -> Ast_mapper.default_mapper.typ mapper other
+  		       | other -> default_mapper.typ mapper other
   		      )
   	      }
       in
@@ -378,14 +379,15 @@ let typ_ann_to_ast flag vs s =
     let process_flag t =
       match flag with
       | Variables ->
-	 let m = { Ast_mapper.default_mapper with
+	 let open Ast_mapper in
+	 let m = { default_mapper with
   		   typ = (fun mapper t ->
   			  match t with
   			  | {ptyp_desc = Ptyp_constr ({txt = Longident.Lident n}, []) } ->
   			     {t with
   			       ptyp_desc = Ptyp_var n
   			     }
-  			  | other -> Ast_mapper.default_mapper.typ mapper other
+  			  | other -> default_mapper.typ mapper other
   			 )
   		 }
 	 in
