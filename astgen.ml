@@ -188,11 +188,11 @@ let decls_to_ast ds =
   (* 				   ; pvb_expr = *)
   (* 				       [%expr Toploop.install_printer *)
   (* 					      (Path.Pident (Ident.create "SFU")) *)
-  (* 					      ({ desc = Types.Tconstr (Path.Pident (Ident.create "tm1"), [], ref Types.Mnil) *)
+  (* 					      ({ desc = Types.Tconstr (Path.Pident (Ident.create "tm"), [], ref Types.Mnil) *)
   (* 					       ; level = 100 (\* higher => more polymorphic *\) *)
   (* 					       ; id = 42 (\* I don't know what is this for, so... *\) *)
   (* 					       }) *)
-  (* 					      (Obj.magic pp_tm1)] *)
+  (* 					      (Obj.magic pp_tm)] *)
   (* 				   ; pvb_loc = Location.none *)
   (* 				   ; pvb_attributes = [] *)
   (* 				   }]) *)
@@ -249,14 +249,11 @@ let rec index_to_var = function
 
 let rec t1_to_ast = function
   | Lam m ->  [%expr Lam [%e t1_to_ast m]]
-  | Tm0 r -> [%expr Tm0 [%e t0_to_ast r ]]
-  | AppS (m, s) -> [%expr sub_tm1 [%e sub_to_ast s] [%e t1_to_ast m]]
+  | AppS (m, s) -> [%expr sub_tm [%e sub_to_ast s] [%e t1_to_ast m]]
   | Meta u -> evar u
-  | Par (u, 1) -> [%expr Tm0(Var [%e evar u])]
+  | Par (u, 1) -> [%expr Var [%e evar u]]
   | Par (_, n) -> raise (AST_gen_error "unimplemented par n")
   | Box m -> [%expr Box [%e t1_to_ast m]]
-
-and t0_to_ast = function
   | C (c, sp) ->  [%expr C ([%e constr (con_name c) []], [%e sp_to_ast sp])]
   | Var x -> [%expr Var [%e index_to_var x]]
 
@@ -285,13 +282,10 @@ let rec gen_pvar_pop_pat v = function
 
 let rec t1_to_pat_ast = function
   | Lam m ->  [%pat? Lam [%p t1_to_pat_ast m]]
-  | Tm0 r -> [%pat? Tm0 [%p t0_to_pat_ast r ]]
   | AppS _ -> raise (AST_gen_error "No explicit substitutions in patterns")
   | Meta u -> pvar u
-  | Par (u, n) -> [%pat? Tm0(Var [%p gen_pvar_pop_pat (pvar u) n])]
+  | Par (u, n) -> [%pat? Var [%p gen_pvar_pop_pat (pvar u) n]]
   | Box m -> [%pat? Box [%p t1_to_pat_ast m]]
-
-and t0_to_pat_ast = function
   | C (c, sp) ->  [%pat? C ([%p pconstr (con_name c) []], [%p sp_to_pat_ast sp])]
   | Var x -> [%pat? Var [%p (index_to_var_pat x)]]
 
@@ -357,7 +351,7 @@ let typ_ann_to_ast flag vs s =
 	| Syntax.Cons (g, x, t) -> [%type: ([%t ctx_to_core_type g], [%t generate_core_type t]) cons]
       in
 
-      [%type: ([%t ctx_to_core_type g], [%t build_base_typ_constr (typ_name s) build_typ_const]) tm1]
+      [%type: ([%t ctx_to_core_type g], [%t build_base_typ_constr (typ_name s) build_typ_const]) tm]
     in
 
     let rec substitute (dict : (string * Parsetree.core_type) list)

@@ -21,18 +21,16 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
       | Top : (('g , 'a base) cons, 'a base) var
       | Pop : ('g, 'a base) var -> (('g, 'b base) cons, 'a base) var
 
-    type (_,_) tm0
-      = Var : ('g, 'a base) var -> ('g, 'a base) tm0
-      | C : 't S.constructor * ('g, 't, 'a base) sp -> ('g, 'a base) tm0
-
      and (_,_,_) sp
        = Empty : ('g, 't, 't) sp
-       | Cons : ('g, 't1) tm1 * ('g, 't2, 't3) sp -> ('g, ('t1, 't2) arr, 't3) sp
+       | Cons : ('g, 't1) tm * ('g, 't2, 't3) sp -> ('g, ('t1, 't2) arr, 't3) sp
 
-     and (_,_) tm1
-       = Lam : (('g, 'a base) cons, 't) tm1 -> ('g, ('a base, 't) arr) tm1
-       | Box :  (nil, 't) tm1 -> ('g, 't boxed) tm1
-       | Tm0 : ('g, 'a base) tm0 -> ('g, 'a base) tm1
+     and (_,_) tm
+       = Lam : (('g, 'a base) cons, 't) tm -> ('g, ('a base, 't) arr) tm
+       | Box :  (nil, 't) tm -> ('g, 't boxed) tm
+       | Var : ('g, 'a base) var -> ('g, 'a base) tm
+       | C : 't S.constructor * ('g, 't, 'a base) sp -> ('g, 'a base) tm
+
 
     (* Shifts of indices *)
 
@@ -70,94 +68,80 @@ module SyntacticFramework (S : sig type _ constructor  val to_string : 'a constr
     let wkn_ren : type g d a. (g, d) ren -> ((g, a base) cons, (d, a base) cons) ren =
       fun s -> DotR(shift_ren (Suc Id) s, Top)
 
-    let rec ren_tm0 : type g d t. (g, d) ren -> (g, t) tm0 -> (d, t) tm0 =
-      fun r -> function
-	    | Var v -> Var (lookup_ren (v, r))
-	    | C (c, sp) -> C (c, ren_sp r sp)
-
-    and ren_sp : type g d t t'. (g, d) ren -> (g, t, t') sp -> (d, t, t') sp =
+    let rec ren_sp : type g d t t'. (g, d) ren -> (g, t, t') sp -> (d, t, t') sp =
       fun r -> function
 	    | Empty -> Empty
-	    | Cons (m, sp) -> Cons(ren_tm1 r m, ren_sp r sp)
+	    | Cons (m, sp) -> Cons(ren_tm r m, ren_sp r sp)
 
-    and ren_tm1 : type g d t. (g, d) ren -> (g, t) tm1 -> (d, t) tm1 =
+    and ren_tm : type g d t. (g, d) ren -> (g, t) tm -> (d, t) tm =
       fun r -> function
-	    | Lam m -> Lam (ren_tm1 (wkn_ren r) m)
+	    | Lam m -> Lam (ren_tm (wkn_ren r) m)
 	    | Box m -> Box m
-	    | Tm0 n -> Tm0 (ren_tm0 r n)
+    	    | Var v -> Var (lookup_ren (v, r))
+    	    | C (c, sp) -> C (c, ren_sp r sp)
 
-    let rec shift_tm0 : type g d t. (g, d) shift -> (g, t) tm0 -> (d, t) tm0 =
-      fun sh -> function
-	     | Var v -> Var (shift_var sh v)
-	     | C (c, sp) -> C (c, shift_sp sh sp)
 
-    and shift_sp : type g d t t1. (g, d) shift -> (g, t, t1) sp -> (d, t, t1) sp =
+    let rec shift_sp : type g d t t1. (g, d) shift -> (g, t, t1) sp -> (d, t, t1) sp =
       fun sh -> function
 	     | Empty -> Empty
-	     | Cons (m, sp) -> Cons (shift_tm1 sh m, shift_sp sh sp)
+	     | Cons (m, sp) -> Cons (shift_tm sh m, shift_sp sh sp)
 
-    and shift_tm1 : type g d t. (g, d) shift -> (g, t) tm1 -> (d, t) tm1 =
+    and shift_tm : type g d t. (g, d) shift -> (g, t) tm -> (d, t) tm =
       fun sh -> function
-	     | Lam m -> Lam (ren_tm1 (DotR (ShiftR (Suc sh), Top)) m)
+	     | Lam m -> Lam (ren_tm (DotR (ShiftR (Suc sh), Top)) m)
 	     | Box m -> Box m
-	     | Tm0 n -> Tm0 (shift_tm0 sh n)
+    	     | Var v -> Var (shift_var sh v)
+    	     | C (c, sp) -> C (c, shift_sp sh sp)
 
     (* Substitutions *)
 
     type (_,_) sub
       = Shift : ('g, 'd) shift-> ('g, 'd) sub
-      | Dot : ('g, 'd) sub * ('d, 't) tm1 -> (('g, 't)cons, 'd) sub
+      | Dot : ('g, 'd) sub * ('d, 't) tm -> (('g, 't)cons, 'd) sub
 
-    let rec lookup : type g d a. ((g, a base) var * (g, d) sub) -> (d, a base) tm1 =
+    let rec lookup : type g d a. ((g, a base) var * (g, d) sub) -> (d, a base) tm =
       function
       | Top, Dot (_, n) -> n
       | Pop v, Dot (s, _) -> lookup (v, s)
-      | v, Shift sh -> Tm0 (Var (shift_var sh v))
+      | v, Shift sh -> Var (shift_var sh v)
 
     let rec shift_sub : type g d e. (d, e) shift -> (g, d) sub -> (g , e) sub =
       fun sh -> function
 	     | Shift sh' -> Shift (compose_shift sh' sh)
-	     | Dot (s, n) -> Dot(shift_sub sh s, shift_tm1 sh n)
+	     | Dot (s, n) -> Dot(shift_sub sh s, shift_tm sh n)
 
     let wkn_sub : type g d a. (g, d) sub -> ((g, a base) cons, (d, a base) cons) sub =
-      fun s -> Dot(shift_sub (Suc Id) s, Tm0 (Var Top))
+      fun s -> Dot(shift_sub (Suc Id) s, Var Top)
 
-    let rec sub_tm0 : type g d t. (g, d) sub -> (g, t) tm0 -> (d, t) tm1 =
-      fun s -> function
-	    | Var v -> lookup (v, s)
-	    | C (c, sp) -> Tm0 (C (c, sub_sp s sp))
-
-    and sub_sp : type g d t t1. (g, d) sub -> (g, t, t1) sp -> (d, t, t1) sp =
+    let rec sub_sp : type g d t t1. (g, d) sub -> (g, t, t1) sp -> (d, t, t1) sp =
       fun s -> function
 	    | Empty -> Empty
-	    | Cons (m, sp) -> Cons(sub_tm1 s m, sub_sp s sp)
+	    | Cons (m, sp) -> Cons(sub_tm s m, sub_sp s sp)
 
-    and sub_tm1 : type g d t. (g, d) sub -> (g, t) tm1 -> (d, t) tm1 =
+    and sub_tm : type g d t. (g, d) sub -> (g, t) tm -> (d, t) tm =
       fun s -> function
-	    | Lam m -> Lam (sub_tm1 (wkn_sub s) m)
+	    | Lam m -> Lam (sub_tm (wkn_sub s) m)
 	    | Box m -> Box m
-	    | Tm0 n -> sub_tm0 s n
+    	    | Var v -> lookup (v, s)
+    	    | C (c, sp) -> C (c, sub_sp s sp)
 
-    let single_subst : type g d s t. ((g, s) cons, t) tm1 -> (g, s) tm1 -> (g, t) tm1 =
-      fun m n -> sub_tm1 (Dot (Shift Id, n)) m
+    let single_subst : type g d s t. ((g, s) cons, t) tm -> (g, s) tm -> (g, t) tm =
+      fun m n -> sub_tm (Dot (Shift Id, n)) m
 
      (* Pretty printer  *)
 
-    let rec pp_tm1 : type g t . Format.formatter -> (g, t) tm1 -> unit =
+    let rec pp_tm : type g t . Format.formatter -> (g, t) tm -> unit =
       fun f t -> match t with
-		 | Lam m -> Format.fprintf f "\\x. %a" pp_tm1 m
-		 | Box m -> Format.fprintf f "{%a}" pp_tm1 m
-		 | Tm0 m -> pp_tm0 f m
-
-    and pp_tm0 : type g t . Format.formatter -> (g, t) tm0 -> unit =
-      fun f t -> match t with
+		 | Lam m -> Format.fprintf f "\\x. %a" pp_tm m
+		 | Box m -> Format.fprintf f "{%a}" pp_tm m
 		 | Var v -> pp_var f v
 		 | C (c, sp) -> Format.fprintf f "%s %a" (S.to_string c) pp_sp sp
+
    and pp_sp : type g s t . Format.formatter -> (g, s, t) sp -> unit =
       fun f sp -> match sp with
 		  | Empty -> ()
-		  | Cons (m, Empty) -> Format.fprintf f "%a" pp_tm1 m
-		  | Cons (m, sp) -> Format.fprintf f "(%a %a)" pp_tm1 m pp_sp sp
+		  | Cons (m, Empty) -> Format.fprintf f "%a" pp_tm m
+		  | Cons (m, sp) -> Format.fprintf f "(%a %a)" pp_tm m pp_sp sp
    and pp_var : type g t . Format.formatter -> (g, t) var -> unit =
       let rec var_to_int : type g t. (g, t) var -> int = function
 	| Top -> 0

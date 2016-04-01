@@ -14,20 +14,17 @@ type type_or_kind
 
 type signature = (string * type_or_kind) list
 
-type tm0
-  = Var of int
-  | C of name * sp
-
- and sp
+type sp
    = Empty
-   | Cons of tm1 * sp
+   | Cons of tm * sp
 
- and tm1
-   = Lam of tm1
-   | Tm0 of tm0
+ and tm
+   = Lam of tm
    | Meta of name
    | Par of name * int
-   | AppS of tm1 * sub
-   | Box of tm1
+   | AppS of tm * sub
+   | Box of tm
+   | Var of int
+   | C of name * sp
 
- and sub = int * tm1 list
+ and sub = int * tm list

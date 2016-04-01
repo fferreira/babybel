@@ -17,15 +17,15 @@ let is_con x c sg = (not (is_var x c)) && (List.mem_assoc x sg)
 
 exception Indexing_failure of string
 
-let rec index_term (sg : signature) (c : ctx_tm) (m : term) : tm1 =
+let rec index_term (sg : signature) (c : ctx_tm) (m : term) : tm =
   match m with
   | Lam (x, m) -> Lam (index_term sg (TCons (c, x)) m)
-  | App (Var x, []) when is_var x c -> Tm0 (Var (lookup_var x c))
-  | App (Var x, sp) when is_con x c sg -> Tm0 (C (x, index_sp sg c sp))
+  | App (Var x, []) when is_var x c -> Var (lookup_var x c)
+  | App (Var x, sp) when is_con x c sg -> C (x, index_sp sg c sp)
   (* | App (Var _, _) -> raise (Indexing_failure "Higher order term not accepted!") *)
   (* | App (MVar x, sp) -> assert false *)
-  | Var x when is_var x c -> Tm0 (Var (lookup_var x c))
-  | Var x when is_con x c sg -> Tm0 (C (x, Empty))
+  | Var x when is_var x c -> Var (lookup_var x c)
+  | Var x when is_con x c sg -> C (x, Empty)
   | Var x -> raise (Indexing_failure ("Unknown var/constructor: "^x))
   | MVar x -> Meta x
   | PVar (x, n) -> Par (x, n)
@@ -42,5 +42,5 @@ and index_sp sg c = function
 
 and index_sub sg c (sh, s) = sh, List.map (index_term sg c) s
 
-let index (sg : signature) (g, m) : tm1 =
+let index (sg : signature) (g, m) : tm =
   index_term sg g m
