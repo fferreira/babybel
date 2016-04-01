@@ -14,8 +14,13 @@
 %token APOSTROPHE
 %token SHARP
 %token STAR
+%token EQ
+%token UNDERSCORE
+%token BAR
 
-%token <string> ID
+%token <string> ID (* starts with lower case *)
+%token <string> CID (* starts with upper case *)
+%token <string> C_TYPE_ANN (* the type annotation of a constructor *)
 %token <int> NUM
 %token LPAREN
 %token RPAREN
@@ -33,6 +38,7 @@
 %start <Syntax.ctx_term> ctx_term_expr
 %start <Syntax.term> term_expr
 %start <Syntax.ctx_tp * Syntax.var> ctx_typ
+%start <unit> gadt_type
 
 %%
 
@@ -85,17 +91,6 @@ shift:
 sub:
 | n = shift? s = separated_list(SEMICOLON, term) { (match n with None -> 0 | Some n -> n), List.rev s }
 
-
-(* | s = subs { assert false } *)
-(* | ID { [] } *)
-(* | s = separated_nonempty_list(COMMA, term) { List.rev s } *)
-
-
-(* subs: *)
-(* | t = term SEMICOLON s = subs { Dot (t, s) } *)
-(* | t = term { Dot (t, Shift 0) } *)
-(* | SHIFT n=NUM { Shift n } *)
-
 ctx_term_expr:
 | ct = ctx_term EOF {ct}
 
@@ -110,3 +105,24 @@ ctx_typ_no_eof:
 
 ctx_typ:
 | ct = ctx_typ_no_eof EOF { ct }
+
+(* Parsing gadt with contextual objects *)
+
+gadt_index:
+| LPAREN l = separated_list (COMMA, UNDERSCORE) RPAREN { List.length l }
+| UNDERSCORE { 1 }
+
+type_header:
+| idx = gadt_index n = ID EQ { n }
+
+gadt_constructor :
+| BAR n = CID ta = C_TYPE_ANN { () }
+
+gadt_constructors :
+| cs = gadt_constructor* { cs }
+
+gadt_type_no_eof:
+| hdr = type_header cs = gadt_constructors { () }
+
+gadt_type:
+| t = gadt_type_no_eof EOF { t }

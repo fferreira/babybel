@@ -407,3 +407,12 @@ let typ_ann_to_ast flag vs s =
     process_flag (substitute dict typ)
   in
   compute_type s
+
+
+(* Generate the ast for types with context indices *)
+let type_to_ast s =
+  let res = Putil.parse Sfparser.gadt_type s in
+  (* TODO : needs to be an intermediate representation that allows generating the data type *)
+  assert (res = ()) ;
+  (* TODO : generate the ast *)
+  raise (Error.Some_error "Generating an ast for recursive types has not been implemented")

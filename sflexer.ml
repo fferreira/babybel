@@ -12,6 +12,7 @@ let regexp lower = ['a'-'z']
 let regexp upper = ['A'-'Z']
 
 let regexp identifier = lower (lower | upper | digit)*
+let regexp constructor_identifier = upper (lower | upper | digit)*
 
 (* Managing source code positions *)
 
@@ -39,9 +40,14 @@ let rec main_scanner pos = lexer
 | "(*" -> comment pos 0 lexbuf
 | eof -> add_word pos (Ulexing.lexeme_length lexbuf), EOF
 
+
+| ":<" -> cnstr_typ_ann pos "" lexbuf
 | ':' -> add_word pos (Ulexing.lexeme_length lexbuf), COLON
 | '(' -> add_word pos (Ulexing.lexeme_length lexbuf), LPAREN
 | '#' -> add_word pos (Ulexing.lexeme_length lexbuf), SHARP
+| '=' -> add_word pos (Ulexing.lexeme_length lexbuf), EQ
+| '_' -> add_word pos (Ulexing.lexeme_length lexbuf), UNDERSCORE
+| '|' -> add_word pos (Ulexing.lexeme_length lexbuf), BAR
 | '*' -> add_word pos (Ulexing.lexeme_length lexbuf), STAR
 | '\'' -> add_word pos (Ulexing.lexeme_length lexbuf), APOSTROPHE
 | ')' -> add_word pos (Ulexing.lexeme_length lexbuf), RPAREN
@@ -61,6 +67,7 @@ let rec main_scanner pos = lexer
 | "|-" -> add_word pos (Ulexing.lexeme_length lexbuf), VDASH
 | numeral -> add_word pos (Ulexing.lexeme_length lexbuf), NUM (int_of_string (Ulexing.utf8_lexeme lexbuf))
 | identifier -> add_word pos (Ulexing.lexeme_length lexbuf), ID (Ulexing.utf8_lexeme lexbuf)
+| constructor_identifier -> add_word pos (Ulexing.lexeme_length lexbuf), CID (Ulexing.utf8_lexeme lexbuf)
 | _ -> raise (Error ("Unexpected lexeme: >" ^ Ulexing.utf8_lexeme lexbuf ^ "<"))
 
 and comment pos level = lexer
@@ -68,3 +75,6 @@ and comment pos level = lexer
 		      | "(*" -> comment (add_word pos 2) (level+1) lexbuf
 		      | "\n" -> comment (add_line pos) level lexbuf
 		      | _ -> comment (add_word pos (Ulexing.lexeme_length lexbuf)) level lexbuf
+and cnstr_typ_ann pos str = lexer
+			  | "\n" -> add_word pos (Ulexing.lexeme_length lexbuf), C_TYPE_ANN str
+			  | _ -> cnstr_typ_ann (add_word pos 1) (str ^ (Ulexing.utf8_lexeme lexbuf)) lexbuf

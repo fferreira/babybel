@@ -89,8 +89,8 @@ let process_value_binding (binding : value_binding) : value_binding =
   with
     Not_found -> binding
 
-let is_signature : structure_item -> bool = function
-  | {pstr_desc = Pstr_attribute({txt = "signature"}, _)} -> true
+let is : string -> structure_item -> bool = fun s -> function
+  | {pstr_desc = Pstr_attribute({txt = s'}, _)} when s' = s -> true
   | _ -> false
 
 let expand_signature : structure_item -> structure = function
@@ -104,11 +104,22 @@ let expand_signature : structure_item -> structure = function
      else raise (Error.Some_error "Multiple declaration blocks in the same session") ;
      save_session !sigma ;
      Astgen.decls_to_ast sigma'
-  | _ -> raise (Error.Some_error "Violation: expand_signature called on an element lacking the right attribute")
+  | _ -> raise (Error.Some_error "Violation: expand_signature called on an element lacking the right attribute(1)")
+
+let expand_type : structure_item -> structure = function
+  | {pstr_desc = Pstr_attribute({txt = "type"}
+			       , PStr [{pstr_desc =
+					  Pstr_eval({pexp_desc =
+						       Pexp_constant (Const_string (s, _))},_)}])} ->
+     Astgen.type_to_ast s
+  | _ -> raise (Error.Some_error "Violation: expand_signature called on an element lacking the right attribute(2)")
 
 let rec process_structure : structure -> structure = function
   | [] -> []
-  | st::sts when is_signature st -> expand_signature st @ process_structure sts
+  (* syntactic framework signature *)
+  | st::sts when is "signature" st -> expand_signature st @ process_structure sts
+  (* inductive type with contextual objects *)
+  | st::sts when is "type" st -> expand_type st @ process_structure sts
   | st::sts -> st::(process_structure sts)
 
 let babybel_mapper (argv : string list) : Ast_mapper.mapper =
