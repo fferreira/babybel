@@ -16,7 +16,7 @@ fix : {tp} -> (tm -> tm) -> tm.
 
 type _ ctx
   = Empty : nil ctx
-  | Cons : (nil, tp_tp base) tm1  * 'g ctx -> (('g, tp_tm base) cons) ctx
+  | Cons : (nil, tp_tp base) tm  * 'g ctx -> (('g, tp_tm base) cons) ctx
 
 let rec lookup [@type "g. g ctx -> [g |- tm] -> [tp]"] = fun g ->
   function
