@@ -68,3 +68,13 @@ let rec conv [@type "g d. (g, d) rel -> [g |- tm] -> [d |- ctm]"] =
 		let mm = conv r m in
 		let nn = conv r n in
 		{t| capp 'mm 'nn |t}
+
+type _ ctx
+  = Em : nil ctx
+  | Co : 'g ctx -> (('g, tp_ctm base) cons) ctx
+
+let rec up [@type "d. d ctx -> [d |- ctm] -> [d |- ctm]"] =
+  fun r -> function
+	| {p| let 'b (\x. 'm) |p} ->
+	   let mm = up (Co r) m in
+	   {t| let 'b (\x. 'mm) |t}
