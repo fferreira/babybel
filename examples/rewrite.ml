@@ -24,9 +24,6 @@ let rec rewrite [@type "g. [g |- tm] -> [g |- tm]"] = function
 | {p| snd 'm |p} ->
    let mm = rewrite m in
    {t| snd 'mm |t}
-| {p| letpair 'm (\x.\y. 'n) |p} ->
-   let mm = rewrite m in
-   rewrite {t| 'n [fst 'mm ; snd 'mm] |t}
 | {p| app 'm 'n |p} ->
    let mm = rewrite m in
    let nn = rewrite n in
@@ -35,6 +32,9 @@ let rec rewrite [@type "g. [g |- tm] -> [g |- tm]"] = function
    let mm = rewrite m in
    {t| lam (\x. 'mm) |t}
 | {p| #x |p} -> {t| #x |t}
+| {p| letpair 'm (\x.\y. 'n) |p} ->
+   let mm = rewrite m in
+   rewrite {t| 'n [fst 'mm ; snd 'mm] |t}
 
 let t0 = rewrite {t| lam (\x. x) |t}
 let t1 = rewrite {t| lam (\x. letpair x (\y.\z. app y z)) |t}

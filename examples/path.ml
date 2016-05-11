@@ -9,13 +9,15 @@ lam : (tm -> tm) -> tm.
 
 exception Not_found
 
-type path
+type step
   = Here
   | AppL
   | AppR
   | InLam
 
-let rec helper [@type "g. [g, x : tm |- tm] -> path list"] =
+type path = step list
+
+let rec helper [@type "g. [g, x : tm |- tm] -> path"] =
 function
 | {p| *, x |- c |p} -> raise Not_found
 | {p| *, x |- lam (\y. 'm) |p} -> InLam::(helper {t| *, x, y |- 'm [^2; y ; x] |t})
@@ -25,7 +27,7 @@ function
    try AppL::(helper m)
    with _ -> AppR::(helper n)
 
-let get_path [@type "g. [g, x : tm |- tm] -> path list"] = fun t ->
+let get_path [@type "g. [g, x : tm |- tm] -> path"] = fun t ->
   try helper t
   with _ -> []
 
@@ -33,7 +35,7 @@ let t0 = {t| x |- x |t}
 let t1 = {t| x |- c |t}
 let t2 = {t| x |- lam (\y. app x y) |t}
 let t3 = {t| x |- lam (\x. app x x) |t}
-let t4 [@type "[x |- tm]"] = {t| x |- lam (\y. app (lam (\z. app(app (app z z) y) x)) x) |t}
+let t4 [@type "[x |- tm]"] = {t| x |- lam (\y. app (lam (\z. app(app (app z x) y) z)) x) |t}
 let t5 = {t| x |- app x x |t}
 let t6 = {t| *, x, y |- x |t}
 
