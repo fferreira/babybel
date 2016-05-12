@@ -7,6 +7,7 @@ pair : tm -> tm -> tm.
 fst : tm -> tm.
 snd : tm -> tm.
 letpair : tm -> (tm -> tm -> tm) -> tm.
+let:  tm -> (tm -> tm) -> tm.
 app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 
@@ -35,6 +36,8 @@ let rec rewrite [@type "g. [g |- tm] -> [g |- tm]"] = function
 | {p| letpair 'm (\x.\y. 'n) |p} ->
    let mm = rewrite m in
    rewrite {t| 'n [snd 'mm ; fst 'mm] |t}
+| {p|let 'm (\x. 'n) |p} ->
+   rewrite {t|'n ['m] |t}
 
 let t0 = rewrite {t| lam (\x. x) |t}
 let t1 = rewrite {t| lam (\x. letpair x (\y.\z. app y z)) |t}
