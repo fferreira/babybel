@@ -34,7 +34,7 @@ let rec rewrite [@type "g. [g |- tm] -> [g |- tm]"] = function
 | {p| #x |p} -> {t| #x |t}
 | {p| letpair 'm (\x.\y. 'n) |p} ->
    let mm = rewrite m in
-   rewrite {t| 'n [fst 'mm ; snd 'mm] |t}
+   rewrite {t| 'n [snd 'mm ; fst 'mm] |t}
 
 let t0 = rewrite {t| lam (\x. x) |t}
 let t1 = rewrite {t| lam (\x. letpair x (\y.\z. app y z)) |t}
