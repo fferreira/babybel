@@ -8,10 +8,9 @@ btm: type.
 
 capp: ctm -> ctm -> ctm.
 clam: btm -> ctm.
-b : ctm.
 
-e: (ctm -> ctm) -> btm.
-c: (ctm -> btm) -> btm.
+embed: (ctm -> ctm) -> btm.
+bind: (ctm -> btm) -> btm.
 
 sub : type.
 empty: sub.
@@ -29,10 +28,6 @@ inductive Ctx_rel : {g:ctx}{h:cctx} ctype =
 | Rsnoc: Ctx_rel [g] [h] -> Ctx_rel [g, x:tm] [h,x:ctm]
 ;
 
-% inductive CtxObj : {h:cctx} ctype =
-%   | Ctx : {h:cctx} CtxObj [h]
-% ;
-
 rec lookup : Ctx_rel [g][h] -> [g |- tm] -> [h |- ctm] =
     fn r => fn t => case t of
     | [g, x:tm |- x] =>
@@ -47,10 +42,11 @@ rec lookup : Ctx_rel [g][h] -> [g |- tm] -> [h |- ctm] =
 rec close : Ctx_rel [g][h] -> [h |- btm] -> [|- btm] =
     / total r (close _ _ r) /
     fn r => fn m => case r of
-    | Rnil => m
+    | Rnil =>
+      {t| embed (bind (\x. 'm)) |t}
     | Rsnoc r =>
       let [h, x:ctm |- M] = m in
-      close r [h |- c (\x. M)]
+      close r [h |- bind (\x. M)]
 ;
 
 rec envr : Ctx_rel[g][h] -> [h |- sub] =
