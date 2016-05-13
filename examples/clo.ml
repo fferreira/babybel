@@ -11,10 +11,9 @@ btm: type.
 
 capp: ctm -> ctm -> ctm.
 clam: {btm} -> ctm.
-b : ctm.
 
-e: (ctm -> ctm) -> btm.
-c: (ctm -> btm) -> btm.
+embed: ctm -> btm.
+bind: (ctm -> btm) -> btm.
 
 sub : type.
 empty: sub.
@@ -22,6 +21,7 @@ dot: sub -> ctm -> sub.
 
 clo: ctm -> sub -> ctm.
 |def}]
+
 
 type (_, _) rel
   = Empty : (nil, nil) rel
@@ -44,7 +44,7 @@ let rec close [@type "g d. (g, d) rel -> [d |- btm] -> [btm]"] =
   fun r m -> match r with
 	     | Empty -> m
 	     | Both r ->
-	     	close r {t| c (\x. 'm) |t}
+	     	close r {t| bind (\x. 'm) |t}
 
 let rec envr [@type "g d. (g, d)rel -> [d |- sub]"] =
   fun r -> match r with
@@ -53,11 +53,12 @@ let rec envr [@type "g d. (g, d)rel -> [d |- sub]"] =
 	      let s = envr r in
 	      {t| *, x |- dot ('s[^1 ;]) x|t}
 
+
 let rec conv [@type "g d. (g, d) rel -> [g |- tm] -> [d |- ctm]"] =
   fun r m -> match m with
 	     | {p| lam (\x. 'm)  |p} ->
 		let mc = conv (Both r) m in
-		let mb = close r {t| e (\x. 'mc[^1 ; x]) |t} in
+		let mb = close r {t| bind (\x. embed ('mc[^1 ; x])) |t} in
 		let s = envr r in
 		{t| clo (clam {'mb}) 's |t}
 	     | {p| #x |p} ->

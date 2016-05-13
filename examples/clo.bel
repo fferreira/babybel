@@ -9,7 +9,7 @@ btm: type.
 capp: ctm -> ctm -> ctm.
 clam: btm -> ctm.
 
-embed: (ctm -> ctm) -> btm.
+embed: ctm -> btm.
 bind: (ctm -> btm) -> btm.
 
 sub : type.
@@ -18,7 +18,7 @@ dot: sub -> ctm -> sub.
 
 clo: ctm -> sub -> ctm.
 
-let t1 = [|- clam (e (\x. x))];
+let t1 = [|- clam (bind (\x. (embed x)))];
 
 schema ctx = tm;
 schema cctx = ctm;
@@ -42,8 +42,7 @@ rec lookup : Ctx_rel [g][h] -> [g |- tm] -> [h |- ctm] =
 rec close : Ctx_rel [g][h] -> [h |- btm] -> [|- btm] =
     / total r (close _ _ r) /
     fn r => fn m => case r of
-    | Rnil =>
-      {t| embed (bind (\x. 'm)) |t}
+    | Rnil => m
     | Rsnoc r =>
       let [h, x:ctm |- M] = m in
       close r [h |- bind (\x. M)]
@@ -62,7 +61,7 @@ rec conv : Ctx_rel [g] [h] -> [g |- tm] -> [h |- ctm] =
     fn r => fn m => case m of
     | [g |- lam \x. M] =>
       let [h, x:ctm |- Mc] = conv (Rsnoc r) [g, x:tm |- M] in
-      let [|- Mb] = close r [h |- e (\x. Mc)] in
+      let [|- Mb] = close r [h |- bind (\x. embed Mc)] in
       let [_ |- S] = envr r in
       [_ |- clo (clam Mb[]) S]
 
