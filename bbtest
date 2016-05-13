@@ -13,5 +13,6 @@
 #use "examples/oldclo.ml";;
 #use "examples/clo.ml";;
 #use "examples/lift.ml";;
+#use "examples/path.ml";;
 
 exit 0;;

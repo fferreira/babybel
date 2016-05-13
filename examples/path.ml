@@ -39,10 +39,10 @@ let t4 [@type "[x |- tm]"] = {t| x |- lam (\y. app (lam (\z. app(app (app z x) y
 let t5 = {t| x |- app x x |t}
 let t6 = {t| *, x, y |- x |t}
 
-let c0 = get_path t0
-let c1 = get_path t1
-let c2 = get_path t2
-let c3 = get_path t3
-let c4 = get_path t4
-let c5 = get_path t5
-let c6 = get_path t6
+let c0 = assert (get_path t0 = [Here])
+let c1 = assert (get_path t1 = [])
+let c2 = assert (get_path t2 = [InLam ; AppL ; Here])
+let c3 = assert (get_path t3 = [])
+let c4 = assert (get_path t4 = [InLam ; AppL ; InLam ; AppL ; AppL ; AppR ; Here])
+let c5 = assert (get_path t5 = [AppL ; Here])
+let c6 = assert (get_path t6 = [])
