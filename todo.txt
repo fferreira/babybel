@@ -1,0 +1,5 @@
+1. fix the domain image order on substitutions as it is reversed from
+that of the ren and other. In any case make it consistent.
+
+2. constructors should produce a base type, and it is required to have
+fully intrinsically typed SF.ml
