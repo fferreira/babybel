@@ -3,3 +3,5 @@ that of the ren and other. In any case make it consistent.
 
 2. constructors should produce a base type, and it is required to have
 fully intrinsically typed SF.ml
+
+3. change * to underscore
