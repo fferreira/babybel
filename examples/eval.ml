@@ -28,6 +28,5 @@ let rec eval [@type "[tm] -> [tm]"] = function
      let {p| lam (\x. 'q) |p} = eval m
      in eval {t| 'q ['n] |t}
   | {p| fix (\f. 'f) |p} -> {t| 'f [fix (\f. 'f)] |t}
-  | _ -> raise Debug
 
 let test =  eval {t| app (app (lam (\x. x)) (lam (\y. y))) z |t}
