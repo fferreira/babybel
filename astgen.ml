@@ -71,14 +71,14 @@ let decls_to_ast ds =
     | (n, Is_kind) ->
        (* constructors *)
        let cons = { pcd_name = wrap (unique_con_name n)
-		  ; pcd_args = []
+		  ; pcd_args = Pcstr_tuple []
 		  ; pcd_res = None
 		  ; pcd_loc = Location.none
 		  ; pcd_attributes = []
 		  }
        in
        (* type *)
-       { pstr_desc = Pstr_type ([{ ptype_name = wrap (typ_name n)
+       { pstr_desc = Pstr_type (Recursive, [{ ptype_name = wrap (typ_name n)
 				 ; ptype_params = []
 				 ; ptype_cstrs = []
 				 ; ptype_kind = Ptype_variant [cons]
@@ -95,7 +95,7 @@ let decls_to_ast ds =
   let generate_constr_type cons =
     (* having the constructors build the type *)
     let signature cons_trees =
-       { pstr_desc = Pstr_type ([{ ptype_name = wrap signature_typ_name
+       { pstr_desc = Pstr_type (Recursive, [{ ptype_name = wrap signature_typ_name
 				 ; ptype_params = [core_type Ptyp_any, Invariant]
 				 ; ptype_cstrs = []
 				 ; ptype_kind = Ptype_variant cons_trees
@@ -111,7 +111,7 @@ let decls_to_ast ds =
     let generate_constructor =
       function (name, Is_type t) ->
 	       { pcd_name = wrap (con_name name)
-	       ; pcd_args = []
+	       ; pcd_args = Pcstr_tuple []
 	       ; pcd_res = Some (wrap_in_signature (generate_core_type t))
 	       ; pcd_loc = Location.none
 	       ; pcd_attributes = []
@@ -131,7 +131,7 @@ let decls_to_ast ds =
     let sf_mod_apply =
       Pmod_structure (* first the type for constructors *)
         [{pstr_desc =
-            Pstr_type
+            Pstr_type (Recursive,
               [{ ptype_name = wrap sf_signature_typ_name
 	       ; ptype_params = [(core_type (Ptyp_var "a"), Invariant)]
 	       ; ptype_cstrs = []
@@ -142,7 +142,7 @@ let decls_to_ast ds =
 						, [core_type (Ptyp_var "a")])))
 	       ; ptype_attributes = []
 	       ; ptype_loc = Location.none
-	       }]
+	       }])
 	 ; pstr_loc = Location.none
 	 }
 	(* and then the type for the to string function *)
@@ -205,7 +205,7 @@ let decls_to_ast ds =
     let constr e t =
       expression(Pexp_constraint (e, t))
     in
-    let typ var_const = core_type (Ptyp_arrow ( ""
+    let typ var_const = core_type (Ptyp_arrow ( Nolabel
 					      , core_type (Ptyp_constr ( wrap (Lident signature_typ_name)
 								       , [var_const "a"]))
 					      , core_type (Ptyp_constr (wrap (Lident "string"), []))))

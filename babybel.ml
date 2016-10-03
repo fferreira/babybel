@@ -35,7 +35,7 @@ let process_value_binding (binding : value_binding) : value_binding =
   let extract_annotation (_, payload) =
     match payload with
     | PStr [str_item] -> (match str_item.pstr_desc with
-			  | Pstr_eval ({pexp_desc = Pexp_constant(Const_string(ann, _))}, _) ->
+			  | Pstr_eval ({pexp_desc = Pexp_constant(Pconst_string(ann, _))}, _) ->
 			     ann
 			  | _ -> raise (Error.Some_error "type annotation has an unexpected structure"))
     | PStr _ -> raise (Error.Some_error "really did not expect more than one structure here")
@@ -97,7 +97,7 @@ let expand_signature : structure_item -> structure = function
   | {pstr_desc = Pstr_attribute({txt = "signature"}
 			       , PStr [{pstr_desc =
 					  Pstr_eval({pexp_desc =
-						       Pexp_constant (Const_string (s, _))},_)}])} ->
+						       Pexp_constant (Pconst_string (s, _))},_)}])} ->
      let sigma' = Putil.parse Sfparser.decls s in
      if !sigma = []
      then sigma := sigma'
@@ -110,7 +110,7 @@ let expand_type : structure_item -> structure = function
   | {pstr_desc = Pstr_attribute({txt = "type"}
 			       , PStr [{pstr_desc =
 					  Pstr_eval({pexp_desc =
-						       Pexp_constant (Const_string (s, _))},_)}])} ->
+						       Pexp_constant (Pconst_string (s, _))},_)}])} ->
      Astgen.type_to_ast s
   | _ -> raise (Error.Some_error "Violation: expand_signature called on an element lacking the right attribute(2)")
 
@@ -137,7 +137,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   (* translate tems in expressions *)
   ; expr = (fun mapper expr ->
   	    match expr with
-  	    | { pexp_desc = Pexp_constant (Const_string (s, Some "t")) } ->
+  	    | { pexp_desc = Pexp_constant (Pconst_string (s, Some "t")) } ->
   	       load_session() ;
   	       let m = Index.index !sigma (Putil.parse Sfparser.ctx_term_expr s) in
   	       Astgen.t1_to_ast m
@@ -145,7 +145,7 @@ let babybel_mapper (argv : string list) : Ast_mapper.mapper =
   (* translate patterns in expressions  *)
   ; pat = (fun mapper pat ->
   	   match pat with
-  	   | { ppat_desc = Ppat_constant (Const_string (s, Some "p"))} ->
+  	   | { ppat_desc = Ppat_constant (Pconst_string (s, Some "p"))} ->
   	      load_session () ;
   	      let m = Index.index !sigma (Putil.parse Sfparser.ctx_term_expr s) in
   	      Astgen.t1_to_pat_ast m
