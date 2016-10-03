@@ -58,7 +58,7 @@ let rec conv [@type "g d. (g, d) rel -> [g |- tm] -> [d |- ctm]"] =
   fun r m -> match m with
 	     | {p| lam (\x. 'm)  |p} ->
 		let mc = conv (Both r) m in
-		let mb = close r {t| bind (\x. embed ('mc[^1 ; x])) |t} in
+		let mb = close r {t| bind (\x. embed 'mc) |t} in
 		let s = envr r in
 		{t| clo (clam {'mb}) 's |t}
 	     | {p| #x |p} ->
