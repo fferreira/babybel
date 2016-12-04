@@ -1,6 +1,6 @@
 # Babybel
 
-This is an experimental implementation of a syntax extension to Ocaml that adds support for contextual objects. Because it uses OCaml's own internal AST reprseentation it is somewhat fuzzy about the compiler version. Babybel works at least with OCaml 4.03.0
+This is an experimental implementation of a syntax extension to Ocaml that adds support for contextual objects. Because it uses OCaml's own internal AST reprseentation it is somewhat fuzzy about the compiler version. Babybel works at least with OCaml 4.03.0 and 4.04.0
 
 ## Examples
 
