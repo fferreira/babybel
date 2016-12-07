@@ -17,6 +17,10 @@ let is_con x c sg = (not (is_var x c)) && (List.mem_assoc x sg)
 
 exception Indexing_failure of string
 
+let rec len = function
+  | Rest -> 0
+  | TCons (g, _) -> 1 + (len g)
+
 let rec index_term (sg : signature) (c : ctx_tm) (m : term) : tm =
   match m with
   | Lam (x, m) -> Lam (index_term sg (TCons (c, x)) m)
@@ -40,7 +44,10 @@ and index_sp sg c = function
   | [] -> Empty
   | m::ms -> Cons (index_term sg c m, index_sp sg c ms)
 
-and index_sub sg c (ShiftBy sh, s) = sh, List.map (index_term sg c) s
+and index_sub sg c (sh, s) =
+  match sh with
+  | ShiftBy sh -> sh, List.map (index_term sg c) s
+  | SomeShift -> len c, List.map (index_term sg c) s (* shift over everything in the context *)
 
 let index (sg : signature) (g, m) : tm =
   index_term sg g m
