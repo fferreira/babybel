@@ -36,7 +36,7 @@ let rec add_projs [@type "h . h cctx -> [nat] -> [h, e:envr |- ctm] -> [e:envr |
   | Empty -> m
   | Cons g' ->
      let succ = {t| s 'n |t} in
-     let m1 = {t| e |-  'm [_ ; (proj e {'n}) ; e] |t} in
+     let m1 = {t| e |-  'm [^1 ; (proj e {'n}) ; e] |t} in
      add_projs g' succ m1
 
 let rec ctx_to_env [@type "h. h cctx -> [h |- envr]"] =
@@ -44,7 +44,7 @@ let rec ctx_to_env [@type "h. h cctx -> [h |- envr]"] =
   | Empty -> {t| nil |t}
   | Cons g' ->
      let e = ctx_to_env g' in
-     {t| *, x |- snoc ('e [_]) x |t}
+     {t| *, x |- snoc ('e [^1 ;]) x |t}
 
 type (_, _) rel
   = Void : (nil, nil) rel
@@ -60,15 +60,15 @@ let rec conv [@type "g h . h cctx -> (g, h) rel -> [g |- tm] -> [h |- ctm]"] = f
      let Both r' = r in
      let Cons h' = h in
      let m1 = conv h' r' {t| #x |t} in
-     {t| *, y |- 'm1 [_] |t}
+     {t| 'm1 [^1 ;] |t}
 
   | {p| g |- lam (\x. 'm) |p} ->
      let m1 = conv (Cons h) (Both r) m in
-     let n = add_projs (Cons h) {t| z |t} {t| *, x, e |- 'm1 [_ ; x] |t} in
+     let n = add_projs (Cons h) {t| z |t} {t| *, x, e |- 'm1 [^2 ; x] |t} in
      let e = ctx_to_env h in
-     {t| close (clam {\e. 'n[_ ; e]}) 'e |t}
+     {t| close (clam {\e. 'n[^1 ; e]}) 'e |t}
 
   | {p| app 'm 'n |p} ->
      let m1 = conv h r m in
      let n1 = conv h r n in
-     {t| open 'm1 (\e. \f. capp f (create (snoc e ('n1[_])))) |t}
+     {t| open 'm1 (\e. \f. capp f (create (snoc e ('n1[^2 ;])))) |t}

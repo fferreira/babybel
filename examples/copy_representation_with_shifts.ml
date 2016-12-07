@@ -27,7 +27,7 @@ let rec lookup [@type "g d . [g |- tm] -> (g, d) rel -> [d |- tmc]"] =
 		 | {p| *,x |- x |p} -> {t| *,x |- x |t}
 		 | {p| ##v |p} ->
 		    let v1 =  lookup {t| #v |t} r'
-		    in {t| *, x |- 'v1 [_] |t}
+		    in {t| *, x |- 'v1 [^1 ;] |t}
 	   end
 
 let rec copy [@type "g d . [g |- tm] -> (g, d) rel -> [d |- tmc]"] =

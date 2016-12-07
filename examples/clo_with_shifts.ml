@@ -35,7 +35,7 @@ let rec lookup [@type "g d . [g |- tm] -> (g, d) rel -> [d |- ctm]"] =
 		 | {p| *,x |- x |p} -> {t| *,x |- x |t}
 		 | {p| ##v |p} ->
 		    let v1 =  lookup {t| #v |t} r'
-		    in {t| *, x |- 'v1 [_] |t}
+		    in {t| *, x |- 'v1 [^1 ;] |t}
 	   end
 
 
@@ -51,7 +51,7 @@ let rec envr [@type "g d. (g, d)rel -> [d |- sub]"] =
 	   | Empty -> {t| empty |t}
 	   | Both r ->
 	      let s = envr r in
-	      {t| *, x |- dot ('s[_]) x|t}
+	      {t| *, x |- dot ('s[^1 ;]) x|t}
 
 
 let rec conv [@type "g d. (g, d) rel -> [g |- tm] -> [d |- ctm]"] =

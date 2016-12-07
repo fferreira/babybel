@@ -58,7 +58,7 @@ let rec lookup [@type "g d . [g |- value] -> (g, d) rel -> [d |- cvalue]"] =
 		 | {p| *, x |- x |p} -> {t| *,x |- x |t}
 		 | {p| *, x |- ##v |p} ->
 		    let v1 =  lookup {t| #v |t} r'
-		    in {t|*, x |- 'v1 [_] |t}
+		    in {t|*, x |- 'v1 [^1 ;] |t}
 	   end
 
 let rec cps [@type "g d . (g, d) rel -> [g |- value] -> [d |- cvalue]"] =
@@ -66,26 +66,26 @@ let rec cps [@type "g d . (g, d) rel -> [g |- value] -> [d |- cvalue]"] =
 	| {p| #x |p} -> lookup {t| #x |t} r
 	| {p| lam (\x. 'e) |p} ->
 	   let ce = cpse (Both r) {t|g, x |-  'e  |t} in
-	   {t| clam (\cv. \cc. 'ce[_ ; cv ; cc]) |t}
+	   {t| clam (\cv. \cc. 'ce[^2 ; cv ; cc]) |t}
 
 
 and cpse [@type "g d. (g, d) rel -> [g |- exp] -> [d, k: kont |- contra]"] =
   fun r -> function
 	| {p| ret 'v |p} ->
 	   let vv = cps r {t| 'v |t} in
-	   {t| *, k |- adm k ('vv[_]) |t}
+	   {t| *, k |- adm k ('vv[^1 ;]) |t}
 
 	| {p| app 'm 'n |p} ->
 	   let mm = cpse r m in
 	   let nn = cpse r n in
-	   {t| *, k |- 'mm [_ ; (kk (\f. 'nn [_ ; (kk (\x. capp f x k))]))] |t}
+	   {t| *, k |- 'mm [^1 ; (kk (\f. 'nn [^2 ; (kk (\x. capp f x k))]))] |t}
 	| _ -> assert false
 
 
 (* applies some of the administrative redeces *)
 let rec ar [@type "d. [d, k: kont |- contra] -> [d, k: kont |- contra]"] =
   function
-  | {p| adm (kk (\vv. 'k1)) 'v |p} -> ar {t|  *, kc|- 'k1 [_ ; kc ; 'v] |t}
+  | {p| adm (kk (\vv. 'k1)) 'v |p} -> ar {t|  *, kc|- 'k1 [^1 ; kc ; 'v] |t}
   | {p| adm #k 'v |p} -> (* it doesn't remove these stuck continuations *)
      let vv = arv v in
      {t|adm #k 'vv |t}
@@ -106,8 +106,8 @@ and arv [@type "d. [d |- cvalue] -> [d |- cvalue]"] =
 and ark [@type "d. [d, k: kont |- kont] -> [d, k: kont |- kont]"] =
   function
   | {p| kk (\v. 'mv) |p} ->
-     let mvv = ar {t| *, k, v |-  'mv [_ ; v ; k] |t} in
-     {t| *, k |- kk (\v. 'mvv[_ ; v ; k]) |t}
+     let mvv = ar {t| *, k, v |-  'mv [^2 ; v ; k] |t} in
+     {t| *, k |- kk (\v. 'mvv[^2 ; v ; k]) |t}
 
 let id_fun = {t| lam (\x. ret x) |t}
 

@@ -13,7 +13,7 @@ let rec count [@type "g. [g, x : tm |- tm] -> int"] =
   function
   | {p| *, x |- c |p} -> 0
   | {p| *, x |- app 'm 'n |p} -> count m + count n
-  | {p| *, x |- lam (\y. 'm) |p} -> count {t| *, x, y |- 'm [_ ; y ; x] |t}
+  | {p| *, x |- lam (\y. 'm) |p} -> count {t| *, x, y |- 'm [^2; y ; x] |t}
   | {p| *, x |- x |p} -> 1
   | {p| #x |p} -> 0
 

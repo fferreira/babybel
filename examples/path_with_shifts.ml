@@ -20,7 +20,7 @@ type path = step list
 let rec helper [@type "g. [g, x : tm |- tm] -> path"] =
 function
 | {p| *, x |- c |p} -> raise Not_found
-| {p| *, x |- lam (\y. 'm) |p} -> InLam::(helper {t| *, x, y |- 'm [_ ; y ; x] |t})
+| {p| *, x |- lam (\y. 'm) |p} -> InLam::(helper {t| *, x, y |- 'm [^2; y ; x] |t})
 | {p| *, x |- x |p} -> [Here]
 | {p| #x |p} -> raise Not_found
 | {p| *, x |- app 'm 'n |p} ->

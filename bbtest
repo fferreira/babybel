@@ -4,15 +4,25 @@
 #use "examples/open.ml";;
 #use "examples/ctx_in_terms.ml";;
 #use "examples/count.ml";;
+#use "examples/count_with_shifts.ml";;
 #use "examples/copy.ml";;
 #use "examples/copy_representation.ml";;
+#use "examples/copy_representation_with_shifts.ml";;
 #use "examples/cps.ml";;
 #use "examples/cps2.ml";;
+#use "examples/cps_with_shifts.ml";;
+#use "examples/cps2_with_shifts.ml";;
 #use "examples/oldtyping.ml";;
+#use "examples/oldtyping_with_shifts.ml";;
 #use "examples/typing.ml";;
 #use "examples/oldclo.ml";;
+#use "examples/oldclo_with_shifts.ml";;
 #use "examples/clo.ml";;
+#use "examples/clo_with_shifts.ml";;
 #use "examples/lift.ml";;
 #use "examples/path.ml";;
+#use "examples/lift_with_shifts.ml";;
+#use "examples/path_with_shifts.ml";;
+
 
 exit 0;;
