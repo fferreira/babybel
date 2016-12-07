@@ -86,7 +86,7 @@ simple_term:
 | LCURLY m = term RCURLY { Box m }
 
 shift:
-| SHIFT n = NUM SEMICOLON { ShiftBy n  }
+| SHIFT n = NUM SEMICOLON { ShiftBy n }
 | UNDERSCORE SEMICOLON? { SomeShift }
 
 sub:
