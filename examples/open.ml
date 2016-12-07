@@ -15,10 +15,10 @@ fix : (tm -> tm) -> tm.
 let t0 = {t| x |- x |t}
 let t1  = {t| |- s z |t}
 let t2  = {t| z |t}
-let t3 = {t| *, x, y |- x |t}
+let t3 = {t| _, x, y |- x |t}
 
 let is_top [@type "d. [d , x : tm |- tm] -> bool"] = function
-  | {p| *, x |- x |p} -> true
+  | {p| _, x |- x |p} -> true
   |  _ -> false
 
 let tt0 = is_top t0

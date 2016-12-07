@@ -24,10 +24,10 @@ let rec lookup [@type "g d . [g |- tm] -> (g, d) rel -> [d |- tmc]"] =
 	| Empty -> assert false (* cannot lookup in an empty context *)
 	| Both r' ->
 	   begin match t with
-		 | {p| *,x |- x |p} -> {t| *,x |- x |t}
+		 | {p| _,x |- x |p} -> {t| _,x |- x |t}
 		 | {p| ##v |p} ->
 		    let v1 =  lookup {t| #v |t} r'
-		    in {t| *, x |- 'v1 [_] |t}
+		    in {t| _, x |- 'v1 [_] |t}
 	   end
 
 let rec copy [@type "g d . [g |- tm] -> (g, d) rel -> [d |- tmc]"] =

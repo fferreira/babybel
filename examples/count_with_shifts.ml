@@ -11,10 +11,10 @@ lam : (tm -> tm) -> tm.
 
 let rec count [@type "g. [g, x : tm |- tm] -> int"] =
   function
-  | {p| *, x |- c |p} -> 0
-  | {p| *, x |- app 'm 'n |p} -> count m + count n
-  | {p| *, x |- lam (\y. 'm) |p} -> count {t| *, x, y |- 'm [^2; y ; x] |t}
-  | {p| *, x |- x |p} -> 1
+  | {p| _, x |- c |p} -> 0
+  | {p| _, x |- app 'm 'n |p} -> count m + count n
+  | {p| _, x |- lam (\y. 'm) |p} -> count {t| _, x, y |- 'm [^2; y ; x] |t}
+  | {p| _, x |- x |p} -> 1
   | {p| #x |p} -> 0
 
 let t0 = {t| x |- x |t}
@@ -23,7 +23,7 @@ let t2 = {t| x |- lam (\y. app x y) |t}
 let t3 = {t| x |- lam (\x. app x x) |t}
 let t4 [@type "[x |- tm]"] = {t| x |- lam (\y. app (lam (\z. app(app (app x z) y) x)) x) |t}
 let t5 = {t| x |- app x x |t}
-let t6 = {t| *, x, y |- x |t}
+let t6 = {t| _, x, y |- x |t}
 
 let c0 = assert (count t0 = 1) (* 1 *)
 let c1 = assert (count t1 = 0) (* 0 *)

@@ -34,10 +34,10 @@ let rec lookup [@type "g d . [g |- tm] -> (g, d) rel -> [d |- ctm]"] =
 	| Empty -> assert false (* cannot lookup in an empty context *)
 	| Both r' ->
 	   begin match t with
-		 | {p| *,x |- x |p} -> {t| *,x |- x |t}
+		 | {p| _,x |- x |p} -> {t| _,x |- x |t}
 		 | {p| ##v |p} ->
 		    let v1 =  lookup {t| #v |t} r'
-		    in {t| *, x |- 'v1 [_] |t}
+		    in {t| _, x |- 'v1 [_] |t}
 	   end
 
 
@@ -53,7 +53,7 @@ let rec envr [@type "g d. (g, d)rel -> [d |- sub]"] =
 	   | Empty -> {t| empty |t}
 	   | Both r ->
 	      let s = envr r in
-	      {t| *, x |- dot ('s[_]) x|t}
+	      {t| _, x |- dot ('s[_]) x|t}
 
 let rec conv [@type "g d. (g, d) rel -> [g |- tm] -> [d |- ctm]"] =
   fun r m -> match m with

@@ -21,7 +21,7 @@ type _ ctx
 
 let rec lookup [@type "g. g ctx -> [g |- tm] -> [g |- tp]"] = fun g ->
   function
-  | {p| *,x |-  x |p} -> let Cons (t,_) = g in {t| 't[^1 ;] |t}
+  | {p| _,x |-  x |p} -> let Cons (t,_) = g in {t| 't[^1 ;] |t}
   | {p| ##x |p} ->
      let Cons (_, g1) = g in
      let t = lookup g1 {t| #x |t} in

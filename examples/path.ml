@@ -19,11 +19,11 @@ type path = step list
 
 let rec helper [@type "g. [g, x : tm |- tm] -> path"] =
 function
-| {p| *, x |- c |p} -> raise Not_found
-| {p| *, x |- lam (\y. 'm) |p} -> InLam::(helper {t| *, x, y |- 'm [_ ; y ; x] |t})
-| {p| *, x |- x |p} -> [Here]
+| {p| _, x |- c |p} -> raise Not_found
+| {p| _, x |- lam (\y. 'm) |p} -> InLam::(helper {t| _, x, y |- 'm [_ ; y ; x] |t})
+| {p| _, x |- x |p} -> [Here]
 | {p| #x |p} -> raise Not_found
-| {p| *, x |- app 'm 'n |p} ->
+| {p| _, x |- app 'm 'n |p} ->
    try AppL::(helper m)
    with _ -> AppR::(helper n)
 
@@ -37,7 +37,7 @@ let t2 = {t| x |- lam (\y. app x y) |t}
 let t3 = {t| x |- lam (\x. app x x) |t}
 let t4 [@type "[x |- tm]"] = {t| x |- lam (\y. app (lam (\z. app(app (app z x) y) z)) x) |t}
 let t5 = {t| x |- app x x |t}
-let t6 = {t| *, x, y |- x |t}
+let t6 = {t| _, x, y |- x |t}
 
 let c0 = assert (get_path t0 = [Here])
 let c1 = assert (get_path t1 = [])

@@ -13,7 +13,6 @@
 %token SHIFT
 %token APOSTROPHE
 %token SHARP
-%token STAR
 %token EQ
 %token UNDERSCORE
 %token BAR
@@ -66,7 +65,7 @@ ctx:
 | g = ctx COMMA v = ID COLON t = tp { Cons (g, v, t) }
 
 ctx_no_annot:
-| STAR { Rest }
+| UNDERSCORE { Rest }
 | g = ctx_no_annot COMMA v = ID { TCons (g, v) }
 | v = ID  { TCons (Rest, v) } (* unary context *)
 

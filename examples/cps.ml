@@ -31,28 +31,28 @@ let rec lookup [@type "g d . [g |- value] -> (g, d) rel -> [d |- cvalue]"] =
 	| Empty -> assert false (* cannot lookup in an empty context *)
 	| Both r' ->
 	   begin match t with
-		 | {p| *, x |- x |p} -> {t| *, x |- x |t}
-		 | {p| *, x |- ##v |p} ->
+		 | {p| _, x |- x |p} -> {t| _, x |- x |t}
+		 | {p| _, x |- ##v |p} ->
 		    let v1 =  lookup {t| #v |t} r'
-		    in {t|*, x |- 'v1 [_] |t}
+		    in {t|_, x |- 'v1 [_] |t}
 	   end
 
 let rec cps [@type "g d . (g, d) rel -> [g |- value] -> [d |- cvalue]"] =
   fun r -> function
 	| {p| #x |p} -> lookup {t| #x |t} r
 	| {p| lam (\x. 'e) |p} ->
-	   let ce = cpse (Both r) {t|*, x |-  'e  |t} in
-	   {t| * |- clam (\cv. \cc. 'ce[_; cv ; cc]) |t}
+	   let ce = cpse (Both r) {t|_, x |-  'e  |t} in
+	   {t| _ |- clam (\cv. \cc. 'ce[_; cv ; cc]) |t}
 
 and cpse [@type "g d. (g, d) rel -> [g |- exp] -> [d, k:ccont |- contra]"] =
   fun r -> function
 	| {p| ret 'v |p} ->
 	   let v1 = cps r {t| 'v |t} in
-	   {t| *, k |- cthrow k ('v1 [_]) |t}
+	   {t| _, k |- cthrow k ('v1 [_]) |t}
 	| {p| app 'm 'n |p} ->
 	   let m1 = cpse r m in
 	   let n1 = cpse r n in
-	   {t| *, k |- 'm1 [_ ; (cconti (\f. 'n1[_ ;(cconti (\x. capp f x k))]))] |t}
+	   {t| _, k |- 'm1 [_ ; (cconti (\f. 'n1[_ ;(cconti (\x. capp f x k))]))] |t}
 
 let id_fun = {t| lam (\x. app (ret x) (ret x)) |t}
 

@@ -44,7 +44,7 @@ let rec ctx_to_env [@type "h. h cctx -> [h |- envr]"] =
   | Empty -> {t| nil |t}
   | Cons g' ->
      let e = ctx_to_env g' in
-     {t| *, x |- snoc ('e [_]) x |t}
+     {t| _, x |- snoc ('e [_]) x |t}
 
 type (_, _) rel
   = Void : (nil, nil) rel
@@ -52,19 +52,19 @@ type (_, _) rel
 
 let rec conv [@type "g h . h cctx -> (g, h) rel -> [g |- tm] -> [h |- ctm]"] = fun h r ->
   function
-  | {p| *,x |- x |p} ->
+  | {p| _,x |- x |p} ->
      let Both _ = r in
-     {t| *, x |- x |t}
+     {t| _, x |- x |t}
 
   | {p| ##x |p} ->
      let Both r' = r in
      let Cons h' = h in
      let m1 = conv h' r' {t| #x |t} in
-     {t| *, y |- 'm1 [_] |t}
+     {t| _, y |- 'm1 [_] |t}
 
   | {p| g |- lam (\x. 'm) |p} ->
      let m1 = conv (Cons h) (Both r) m in
-     let n = add_projs (Cons h) {t| z |t} {t| *, x, e |- 'm1 [_ ; x] |t} in
+     let n = add_projs (Cons h) {t| z |t} {t| _, x, e |- 'm1 [_ ; x] |t} in
      let e = ctx_to_env h in
      {t| close (clam {\e. 'n[_ ; e]}) 'e |t}
 
