@@ -13,4 +13,4 @@ This is an experimental implementation of a syntax extension to Ocaml that adds 
 After building with ```make```:
 
 1. ```./run```
-2. ```#use "example/nat.ml";;```
+2. ```#use "examples/nat.ml";;```
