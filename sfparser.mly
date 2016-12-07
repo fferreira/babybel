@@ -86,10 +86,12 @@ simple_term:
 | LCURLY m = term RCURLY { Box m }
 
 shift:
-| SHIFT n = NUM SEMICOLON { n }
+| SHIFT n = NUM SEMICOLON { ShiftBy n  }
+| UNDERSCORE SEMICOLON? { SomeShift }
 
 sub:
-| n = shift? s = separated_list(SEMICOLON, term) { (match n with None -> 0 | Some n -> n), List.rev s }
+| sh = shift? s = separated_list(SEMICOLON, term) { (match sh with None -> ShiftBy 0 | Some sh -> sh), List.rev s }
+
 
 ctx_term_expr:
 | ct = ctx_term EOF {ct}

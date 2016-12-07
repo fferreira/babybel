@@ -40,7 +40,7 @@ and index_sp sg c = function
   | [] -> Empty
   | m::ms -> Cons (index_term sg c m, index_sp sg c ms)
 
-and index_sub sg c (sh, s) = sh, List.map (index_term sg c) s
+and index_sub sg c (ShiftBy sh, s) = sh, List.map (index_term sg c) s
 
 let index (sg : signature) (g, m) : tm =
   index_term sg g m

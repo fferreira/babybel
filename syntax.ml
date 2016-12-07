@@ -3,6 +3,10 @@ open Parsetree
 
 type var = string
 
+type shift_spec
+  = ShiftBy of int
+  | SomeShift
+
 type term
   = Lam of var * term
   | App of term * (term list)
@@ -13,7 +17,7 @@ type term
   | Box of term
 
  (* a shift and a list of terms to substitute for variables *)
- and sub = int * term list
+ and sub = shift_spec * term list
 
 (* the context in the contextual types *)
 type ctx_tp
